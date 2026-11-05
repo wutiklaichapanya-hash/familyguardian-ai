@@ -1,0 +1,51 @@
+# FamilyGuardian AI — gitleaks configuration.
+# Extends the default ruleset and allowlists ONLY the documented, synthetic, local-only
+# values. Do not widen this to whole files or directories: a real key pasted into
+# .env.example, a test or a doc must still fail the scan.
+title = "FamilyGuardian AI (FGAI-2026-001)"
+
+[extend]
+useDefault = true
+
+# 1) Values documented in .env.example and docs/decisions/AGENT_BRIEF_COMMON.md.
+#    They are placeholders for local Docker / CI only and grant access to nothing real.
+[[allowlists]]
+description = "Documented local-only placeholders (.env.example, compose, CI)"
+regexTarget = "match"
+regexes = [
+  '''fg_local_only''',                          # local Postgres password (Docker, port 5433)
+  '''change-me-local-only-32-chars-minimum''',  # SESSION_SECRET placeholder
+  '''ci-only-session-secret-32-chars-minimum''',# SESSION_SECRET used in CI
+  '''local-sandbox-secret''',                   # SANDBOX_WEBHOOK_SECRET (sandbox payments)
+]
+
+# 2) Synthetic demo-account passwords (AGENT_BRIEF_COMMON.md "Demo accounts").
+[[allowlists]]
+description = "Synthetic demo-account passwords (seed, tests, README)"
+regexTarget = "match"
+regexes = [
+  '''Demo-(Senior|Family|Care|Admin)-2026''',
+]
+
+# 3) Generated / vendored files that are not authored secrets.
+[[allowlists]]
+description = "Lockfile and build output"
+paths = [
+  '''(^|/)pnpm-lock\.yaml$''',
+  '''(^|/)node_modules/''',
+  '''(^|/)\.next/''',
+  '''(^|/)(playwright-report|test-results|coverage)/''',
+]
+
+# 4) Synthetic fixture passwords used ONLY inside test code (backend test helpers).
+#    Both conditions must hold: the literal matches AND the file is under a test directory.
+[[allowlists]]
+description = "Synthetic test-fixture passwords in test code only"
+condition = "AND"
+regexTarget = "match"
+regexes = [
+  '''Pw-For-Test-2026''',
+]
+paths = [
+  '''(^|/)(test|tests|__tests__)/''',
+]

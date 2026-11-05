@@ -34,6 +34,7 @@ export type ScamSignal = (typeof SCAM_SIGNALS)[number];
 
 export const DASHBOARD_STATUS = [
   'no_action_needed', 'check_in_recommended', 'assistance_requested', 'verify_possible_scam',
+  'not_shared', // viewer holds no grant that could produce a status (SR-01)
 ] as const;
 export type DashboardStatus = (typeof DASHBOARD_STATUS)[number];
 
@@ -51,5 +52,16 @@ export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];
 /** Action log vocabulary — describes ONLY what the system did. */
 export const ACTION_LOG_KINDS = ['call_started_from_app', 'help_request_sent', 'alert_acknowledged'] as const;
 export type ActionLogKind = (typeof ACTION_LOG_KINDS)[number];
+
+/** Which grant a recipient must hold for each alert kind (SR-12). Checked at create, delivery, read and ack. */
+export const ALERT_KIND_CATEGORY: Record<AlertKind, ShareCategory> = {
+  user_requested_help: 'help_requests',
+  shared_scam_check: 'scam_checks',
+  shared_transfer_pause: 'transfer_pauses',
+  shared_checkin_concern: 'checkins',
+};
+
+/** Amount buckets shown to grantees instead of exact amounts (SR-23). */
+export type AmountBucket = 'under_10k' | '10k_50k' | '50k_200k' | 'over_200k';
 
 export type DirectoryVerification = 'verified' | 'needs_human_verification';

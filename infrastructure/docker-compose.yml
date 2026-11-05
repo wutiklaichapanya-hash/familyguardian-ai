@@ -12,5 +12,51 @@ services:
       test: ["CMD-SHELL", "pg_isready -U fg -d familyguardian"]
       interval: 3s
       retries: 20
+
+  # ---- profile "full": containerised API + web (local evaluation only) -------------
+  # Start:  docker compose -f infrastructure/docker-compose.yml --profile full up -d --build
+  # The db service above is unchanged and still starts on its own with `pnpm db:up`.
+  # Stop the host `pnpm dev:api` / `pnpm dev:web` first: these bind the same ports.
+  # Migrations and seed still run from the host (`pnpm db:migrate && pnpm db:seed`).
+  api:
+    profiles: [full]
+    build:
+      context: ..
+      dockerfile: infrastructure/Dockerfile.api
+    env_file:
+      - path: ../.env
+        required: true
+    environment:
+      # Overrides for the container network (.env points at localhost:5433 for host dev).
+      DATABASE_URL: postgres://fg:fg_local_only@db:5432/familyguardian
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      API_PORT: "4100"
+    ports: ["127.0.0.1:4100:4100"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    profiles: [full]
+    build:
+      context: ..
+      dockerfile: infrastructure/Dockerfile.web
+      args:
+        API_BASE_URL: http://api:4100
+    env_file:
+      - path: ../.env
+        required: true
+    environment:
+      NODE_ENV: production
+      API_BASE_URL: http://api:4100
+    ports: ["127.0.0.1:3100:3100"]
+    depends_on:
+      db:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    restart: unless-stopped
 volumes:
   fgdata:

@@ -1,0 +1,16 @@
+# BuildKit uses <Dockerfile>.dockerignore placed next to the Dockerfile.
+**/node_modules
+**/.next
+**/dist
+**/coverage
+**/test-results
+**/playwright-report
+**/*.log
+**/.DS_Store
+.git
+.github
+.env
+.env.*
+!.env.example
+docs
+infrastructure/*.dockerignore

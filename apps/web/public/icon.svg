@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="FamilyGuardian">
+  <rect width="512" height="512" rx="112" fill="#2F6F6A"/>
+  <path d="M256 92 132 140v104c0 86 53 152 124 176 71-24 124-90 124-176V140z" fill="#FBF8F3"/>
+  <path d="M256 330s-74-44-74-96a40 40 0 0 1 74-21 40 40 0 0 1 74 21c0 52-74 96-74 96z" fill="#E9A23B"/>
+</svg>

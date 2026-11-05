@@ -1,0 +1,41 @@
+{
+  "payments": {
+    "status": "reported",
+    "tests": "71/71 pass (re-run by lead)"
+  },
+  "security": {
+    "status": "reported",
+    "tests": "n/a \u2014 36 findings (0 critical, 9 high); 13 ARCH blockers fixed in contract v0.2"
+  },
+  "business": {
+    "status": "reported",
+    "tests": "n/a \u2014 docs; claims labelled evidence/hypothesis/estimate"
+  },
+  "research": {
+    "status": "reported",
+    "tests": "n/a \u2014 docs; 2 High healthcare-safety UI items sent to frontend"
+  },
+  "ai": {
+    "status": "reported",
+    "tests": "113/113 pass (re-run by lead); eval recall 47/47, FP 0/25 on self-written set"
+  },
+  "directory": {
+    "status": "reported",
+    "tests": "n/a \u2014 candidate evidence for 16 numbers; all still need human verification"
+  },
+  "devops": {
+    "status": "reported",
+    "tests": "docker build OK; gitleaks clean; restore rehearsal OK (schema only); API host bug sent to backend"
+  },
+  "codex-ux": {
+    "status": "running"
+  },
+  "web": {
+    "status": "reported",
+    "tests": "14/14 pass (re-run by lead); build OK; smoke via proxy OK; no visual browser pass yet"
+  },
+  "backend": {
+    "status": "reported",
+    "tests": "58/58 pass (re-run by lead); typecheck OK; seed OK"
+  }
+}

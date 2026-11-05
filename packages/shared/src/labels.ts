@@ -8,6 +8,7 @@ export const DASHBOARD_LABELS: Record<DashboardStatus, L> = {
   check_in_recommended: { th: 'ลองทักทายดูนะ', en: 'Check In Recommended' },
   assistance_requested: { th: 'ขอความช่วยเหลือ', en: 'Assistance Requested' },
   verify_possible_scam: { th: 'ช่วยตรวจสอบข้อความ', en: 'Verify Possible Scam' },
+  not_shared: { th: 'ยังไม่มีข้อมูลที่แชร์กับคุณ', en: 'Nothing shared with you yet' },
 };
 
 export const MOOD_LABELS: Record<Mood, L> = {
@@ -32,5 +33,5 @@ export const NO_DATA_LABEL: L = { th: 'ยังไม่มีการเช�
 export const FORBIDDEN_PHRASES: readonly string[] = [
   'ปลอดภัยแน่นอน', 'แจ้งตำรวจแล้ว', 'เลขคดี', 'รถพยาบาลกำลังไป', 'ซึมเศร้า', 'วินิจฉัย',
   'definitely safe', 'this is safe', 'reported to police', 'case number', 'ambulance dispatched',
-  'diagnosed', 'depression', 'call connected',
+  'diagnosed', 'depression', 'call connected', 'ปลอดภัย 100%', 'ไม่ใช่มิจฉาชีพแน่นอน',
 ];
