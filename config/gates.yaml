@@ -1,0 +1,16 @@
+version: 1
+project: FGAI-2026-001
+# Adapted from TELCO_Claude_Hybrid_Agency_v2/config/gates.yaml. Signers are TBD (blocker B1).
+gates:
+  SCOPE:   {human_roles: [product_owner], required_evidence: ["planning pack 01-05 reviewed", "assumptions A1-A10 accepted", "blockers B1-B3 answered"]}
+  DESIGN:  {human_roles: [ux_reviewer, product_owner], depends_on: SCOPE, required_evidence: ["clickable screens", "Thai copy native review", "a11y checklist"]}
+  ARCH:    {human_roles: [tech_lead, security], depends_on: DESIGN, required_evidence: ["ADR 001-008", "independent threat-model review", "API contract draft"]}
+  QA:      {human_roles: [qa, security], depends_on: ARCH, required_evidence: ["test report with real counts", "axe 0 serious/critical", "authz matrix", "0 critical/high open"]}
+  UAT:     {human_roles: [product_owner, uat_testers], depends_on: QA, required_evidence: ["UAT results", "known limitations accepted"]}
+  RELEASE: {human_roles: [pm, devops], depends_on: UAT, required_evidence: ["release note", "rollback + restore rehearsal", "help-directory verification"]}
+always_requires_human_approval:
+  - enable real AI / notification / payment provider
+  - purchases
+  - outbound communication to real people or partners
+  - use of real personal, health or financial data
+self_approval: forbidden
