@@ -8,7 +8,8 @@ import { api, ApiError } from '@/lib/api';
 import { formatDateTime, formatTime } from '@/lib/i18n/format';
 import { useI18n } from '@/lib/i18n';
 import { DeliveryList } from '@/components/DeliveryList';
-import { Chip, RequireRole, Status, TelLink, useErrorMessage } from '@/components/ui';
+import { AlertRegion, Chip, RequireRole, Status, TelLink, useErrorMessage } from '@/components/ui';
+import { defang } from '@/lib/defang';
 
 function AlertInner() {
   const { t, locale } = useI18n();
@@ -18,7 +19,8 @@ function AlertInner() {
   const [alert, setAlert] = useState<AlertDTO | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState('');
+  const [ackError, setAckError] = useState('');
+  const [callStatus, setCallStatus] = useState('');
   const [seniorContact, setSeniorContact] = useState<ContactDTO | null | undefined>(undefined);
 
   useEffect(() => {
@@ -40,12 +42,12 @@ function AlertInner() {
   async function ack() {
     if (!alert) return;
     setBusy(true);
+    setAckError('');
     try {
       const a = await api.ackAlert(alert.id);
       setAlert(a);
-      if (a.acknowledgedBy) setStatus(t('alert.ackedBy', { name: a.acknowledgedBy.name, time: formatTime(a.acknowledgedBy.at, locale) }));
     } catch (e) {
-      setStatus(e instanceof ApiError && e.status === 404 ? t('alert.notFound') : errMsg(e));
+      setAckError(e instanceof ApiError && e.status === 404 ? t('alert.notFound') : errMsg(e));
     } finally {
       setBusy(false);
     }
@@ -80,7 +82,8 @@ function AlertInner() {
                 </Chip>
               </dd>
             </dl>
-            <p>{alert.summary}</p>
+            {/* Untrusted text: rendered inert (no link or tel: detection). */}
+            <p>{defang(alert.summary)}</p>
           </article>
 
           <section aria-labelledby="told-h" className="card">
@@ -88,18 +91,26 @@ function AlertInner() {
             <DeliveryList deliveries={alert.deliveries} />
           </section>
 
+          {/* Acknowledgement and call feedback live in separate regions so one never hides the other. */}
           <div role="status" aria-live="polite">
-            {alert.acknowledgedBy ? (
+            {alert.acknowledgedBy && (
               <p className="notice">
                 <strong>
-                  <span aria-hidden="true">✓ </span>
                   {t('alert.ackedBy', { name: alert.acknowledgedBy.name, time: formatTime(alert.acknowledgedBy.at, locale) })}
                 </strong>
               </p>
-            ) : (
-              status && <p>{status}</p>
             )}
           </div>
+          <AlertRegion>{ackError}</AlertRegion>
+          <Status>
+            {callStatus && (
+              <>
+                <strong>{callStatus}</strong>
+                <br />
+                <span className="small">{t('contacts.startedNote')}</span>
+              </>
+            )}
+          </Status>
 
           <div className="stack">
             {!alert.acknowledgedBy && (
@@ -108,7 +119,7 @@ function AlertInner() {
               </button>
             )}
             {seniorContact ? (
-              <TelLink phone={seniorContact.phone} onCall={() => setStatus(t('alert.callStarted'))}>
+              <TelLink phone={seniorContact.phone} onCall={() => setCallStatus(t('alert.callStarted'))}>
                 {t('alert.callSenior', { name: alert.seniorName })}
               </TelLink>
             ) : (

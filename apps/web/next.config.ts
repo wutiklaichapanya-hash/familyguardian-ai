@@ -17,6 +17,11 @@ const csp = [
   "form-action 'self'",
 ].join('; ');
 
+const AUTHENTICATED_ROUTES = [
+  '/home', '/checkin', '/contacts', '/scam-check', '/guardian-pause', '/help', '/privacy', '/invite/accept',
+  '/family', '/alerts/:id*', '/notifications', '/admin', '/billing',
+];
+
 const nextConfig: NextConfig = {
   transpilePackages: ['@fg/shared'],
   poweredByHeader: false,
@@ -40,6 +45,12 @@ const nextConfig: NextConfig = {
         source: '/api/v1/:path*',
         headers: [{ key: 'Cache-Control', value: 'no-store' }],
       },
+      // Signed-in pages (SR-14, shared devices): no document caching, so Back after sign-out does not
+      // re-show a stored page. Data is fetched client-side with no-store; this covers the HTML shell too.
+      ...AUTHENTICATED_ROUTES.map((source) => ({
+        source,
+        headers: [{ key: 'Cache-Control', value: 'private, no-store' }],
+      })),
     ];
   },
 };

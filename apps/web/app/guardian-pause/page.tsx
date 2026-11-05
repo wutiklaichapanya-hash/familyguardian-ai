@@ -7,7 +7,7 @@ import { api } from '@/lib/api';
 import { formatNumber } from '@/lib/i18n/format';
 import { useI18n, type MessageKey } from '@/lib/i18n';
 import { SharePanel } from '@/components/SharePanel';
-import { BackHome, ErrorText, RequireRole, TelLink, useErrorMessage } from '@/components/ui';
+import { AlertRegion, BackHome, ErrorText, RequireRole, TelLink, useErrorMessage } from '@/components/ui';
 
 const QUESTIONS: { key: keyof GuardianPauseAnswers; label: MessageKey }[] = [
   { key: 'knowsRecipientPersonally', label: 'pause.q.knows' },
@@ -28,7 +28,6 @@ function PauseInner() {
   const [formError, setFormError] = useState('');
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<GuardianPauseDTO | null>(null);
-  const [showSteps, setShowSteps] = useState(false);
   const [banks, setBanks] = useState<DirectoryEntryDTO[] | null>(null);
   const resultRef = useRef<HTMLElement>(null);
 
@@ -74,7 +73,10 @@ function PauseInner() {
     setAmount('');
     setAnswers({});
     setNote('');
-    setShowSteps(false);
+    setErrors({});
+    setFormError('');
+    // The focused result is removed: return focus to the first input (WCAG 2.4.3).
+    requestAnimationFrame(() => document.getElementById('amount')?.focus());
   }
 
   const stop = result?.level === 'stop_and_verify';
@@ -127,7 +129,7 @@ function PauseInner() {
             </label>
             <input id="pnote" type="text" value={note} maxLength={200} onChange={(e) => setNote(e.target.value)} />
           </div>
-          <div role="alert"><ErrorText>{formError}</ErrorText></div>
+          <AlertRegion>{formError}</AlertRegion>
           <button type="submit" className="btn btn-primary btn-block" disabled={busy}>
             {busy ? t('pause.submitting') : t('pause.submit')}
           </button>
@@ -163,14 +165,15 @@ function PauseInner() {
           <section aria-labelledby="pause-actions-h" className="card">
             <h2 id="pause-actions-h">{t('pause.actions')}</h2>
             <div className="stack">
-              <button type="button" className="btn btn-primary btn-block" aria-expanded={showSteps} aria-controls="verify-steps" onClick={() => setShowSteps((s) => !s)}>
-                {t('pause.stopVerify')}
-              </button>
-              <ol id="verify-steps" hidden={!showSteps}>
-                <li>{t('pause.step1')}</li>
-                <li>{t('pause.step2')}</li>
-                <li>{t('pause.step3')}</li>
-              </ol>
+              {/* Verification steps are shown immediately, not behind a toggle. */}
+              <div>
+                <h3>{t('pause.stopVerify')}</h3>
+                <ol>
+                  <li>{t('pause.step1')}</li>
+                  <li>{t('pause.step2')}</li>
+                  <li>{t('pause.step3')}</li>
+                </ol>
+              </div>
               <Link className="btn btn-secondary btn-block" href="/contacts">
                 <span aria-hidden="true">📞 </span>
                 {t('pause.callFamily')}
@@ -197,6 +200,7 @@ function PauseInner() {
             category="transfer_pauses"
             title="pause.share"
             noneKey="pause.shareNone"
+            includesKey="pause.shareIncludes"
             onShare={async (ids) => {
               const r = await api.shareGuardianPause(result.id, ids);
               setResult(r);
