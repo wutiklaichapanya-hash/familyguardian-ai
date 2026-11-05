@@ -41,20 +41,16 @@ paths = [
 #    Both conditions must hold: the literal matches AND the file is under a test directory.
 [[allowlists]]
 description = "Synthetic test-fixture passwords in test code only"
-condition = "AND"
+# NOTE: a path+regex AND condition did not hold in gitleaks v8.28 (it allowlisted ANY secret under test/),
+# so this entry matches the exact synthetic value only, anywhere.
 regexTarget = "match"
 regexes = [
   '''Pw-For-Test-2026''',
-]
-paths = [
-  '''(^|/)(test|tests|__tests__)/''',
 ]
 
 # 5) Synthetic register-test passwords (services/api/test/v03.test.ts): exact values only, test files only.
 [[allowlists]]
 description = "Synthetic register-test fixture passwords"
-condition = "AND"
-paths = ['''^services/api/test/.*\.test\.ts$''']
 regexTarget = "match"
 regexes = [
   '''Blue-Tamarind-77''',
