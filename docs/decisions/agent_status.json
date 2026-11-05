@@ -9,7 +9,7 @@
     "status": "reported",
     "tests": "58/58 pass (re-run by lead); typecheck OK; seed OK",
     "missing": "—",
-    "measured_at": "2026-11-05T14:08:45.107Z"
+    "measured_at": "2026-11-05T14:43:34.191Z"
   },
   {
     "id": "ai",
@@ -21,7 +21,7 @@
     "status": "reported",
     "tests": "113/113 pass (re-run by lead); eval recall 47/47, FP 0/25 on self-written set",
     "missing": "—",
-    "measured_at": "2026-11-05T14:08:45.107Z"
+    "measured_at": "2026-11-05T14:43:34.191Z"
   },
   {
     "id": "web",
@@ -33,7 +33,7 @@
     "status": "reported",
     "tests": "14/14 pass (re-run by lead); build OK; smoke via proxy OK; no visual browser pass yet",
     "missing": "—",
-    "measured_at": "2026-11-05T14:08:45.107Z"
+    "measured_at": "2026-11-05T14:43:34.191Z"
   },
   {
     "id": "payments",
@@ -45,7 +45,7 @@
     "status": "reported",
     "tests": "71/71 pass (re-run by lead)",
     "missing": "—",
-    "measured_at": "2026-11-05T14:08:45.107Z"
+    "measured_at": "2026-11-05T14:43:34.191Z"
   },
   {
     "id": "security",
@@ -57,7 +57,7 @@
     "status": "reported",
     "tests": "n/a — 36 findings (0 critical, 9 high); 13 ARCH blockers fixed in contract v0.2",
     "missing": "—",
-    "measured_at": "2026-11-05T14:08:45.107Z"
+    "measured_at": "2026-11-05T14:43:34.191Z"
   },
   {
     "id": "research",
@@ -69,7 +69,7 @@
     "status": "reported",
     "tests": "n/a — docs; 2 High healthcare-safety UI items sent to frontend",
     "missing": "—",
-    "measured_at": "2026-11-05T14:08:45.107Z"
+    "measured_at": "2026-11-05T14:43:34.191Z"
   },
   {
     "id": "business",
@@ -81,7 +81,7 @@
     "status": "reported",
     "tests": "n/a — docs; claims labelled evidence/hypothesis/estimate",
     "missing": "—",
-    "measured_at": "2026-11-05T14:08:45.107Z"
+    "measured_at": "2026-11-05T14:43:34.191Z"
   },
   {
     "id": "qa",
@@ -93,7 +93,7 @@
     "status": "reported",
     "tests": "E2E run 2: 236/236 pass; axe 0 violations (24 screens); F-1 & F-2 closed",
     "missing": "—",
-    "measured_at": "2026-11-05T14:08:45.107Z"
+    "measured_at": "2026-11-05T14:43:34.191Z"
   },
   {
     "id": "devops",
@@ -105,7 +105,7 @@
     "status": "reported",
     "tests": "docker build OK; gitleaks clean; restore rehearsal OK (schema only); API host bug sent to backend",
     "missing": "—",
-    "measured_at": "2026-11-05T14:08:45.107Z"
+    "measured_at": "2026-11-05T14:43:34.191Z"
   },
   {
     "id": "directory",
@@ -117,7 +117,7 @@
     "status": "reported",
     "tests": "n/a — candidate evidence for 16 numbers; all still need human verification",
     "missing": "—",
-    "measured_at": "2026-11-05T14:08:45.107Z"
+    "measured_at": "2026-11-05T14:43:34.191Z"
   },
   {
     "id": "codex-ux",
@@ -129,7 +129,7 @@
     "status": "reported",
     "tests": "n/a — read-only review: 12 P0 fixes queued for frontend after QA run",
     "missing": "—",
-    "measured_at": "2026-11-05T14:08:45.107Z"
+    "measured_at": "2026-11-05T14:43:34.191Z"
   },
   {
     "id": "web-p0",
@@ -141,7 +141,7 @@
     "status": "reported",
     "tests": "web 60/60 (lead re-run after merge); build OK",
     "missing": "—",
-    "measured_at": "2026-11-05T14:08:45.107Z"
+    "measured_at": "2026-11-05T14:43:34.191Z"
   },
   {
     "id": "api-v03",
@@ -153,7 +153,7 @@
     "status": "reported",
     "tests": "api 79/79, ai 114/114 (lead re-run after merge)",
     "missing": "—",
-    "measured_at": "2026-11-05T14:08:45.107Z"
+    "measured_at": "2026-11-05T14:43:34.191Z"
   },
   {
     "id": "codex-mock",
@@ -165,18 +165,18 @@
     "status": "reported",
     "tests": "n/a — 3 mockups (home, scam result, family)",
     "missing": "—",
-    "measured_at": "2026-11-05T14:08:45.107Z"
+    "measured_at": "2026-11-05T14:43:34.191Z"
   },
   {
     "id": "redesign",
     "agent": "Visual redesign (worktree)",
     "area": "apps/web",
-    "done": 0,
+    "done": 1,
     "total": 1,
-    "pct": 0,
-    "status": "running",
-    "tests": "not reported yet",
-    "missing": "merged to main",
-    "measured_at": "2026-11-05T14:08:45.107Z"
+    "pct": 100,
+    "status": "reported",
+    "tests": "web 60/60; E2E 236/236 after merge (lead run); axe 0",
+    "missing": "—",
+    "measured_at": "2026-11-05T14:43:34.191Z"
   }
 ]
