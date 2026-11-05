@@ -68,7 +68,8 @@ test('AC-8 / SR-12: with no one set up to receive help, the UI says so and shows
     await expect(page.getByText(/ยังไม่มีใครถูกตั้งให้รับคำขอนี้|No one is set up to receive this request/).first()).toBeVisible({ timeout: 20_000 });
     await expect(page.locator('a[href^="tel:1669"]').first()).toBeVisible();
     const text = await pageText(page);
-    expect(text).not.toMatch(/ส่งการแจ้งเตือนถึง|Alert sent to|ส่งแล้ว\b/);
+    // the static intro says "sends a notification to people you trust"; a delivery state would read "ส่งการแจ้งเตือนถึง <name> แล้ว"
+    expect(text).not.toMatch(/ส่งการแจ้งเตือนถึง[^\n]*แล้ว|Alert sent to|ส่งแล้ว/);
   } finally {
     await restoreSeedGrants(somsri, ids);
     await somsri.dispose();

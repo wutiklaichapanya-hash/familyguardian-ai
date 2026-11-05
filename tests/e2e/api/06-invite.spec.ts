@@ -1,40 +1,47 @@
 // F-01 / SR-08 / SR-09 / SR-11: invite link token -> accept -> pending_confirmation (zero grants) -> senior confirms with password.
-// Invitee account: the demo seed has no spare unaffiliated family account and the contract has no registration endpoint,
-// so the suite uses FG_E2E_INVITEE_EMAIL/PASSWORD when given, else the admin demo account (a signed-in user in no circle).
-import { test, expect, type APIRequestContext } from '@playwright/test';
+// Invitee account: the demo seed has no spare family/caregiver account outside Somsri's circle and the contract has no
+// registration endpoint (admin cannot accept invites: role check). So the suite REMOVES Anan (zero-grant member) with
+// step-up, re-invites him through the full link-token flow, and ends with Anan back as a confirmed zero-grant member,
+// i.e. exactly the seeded state. FG_E2E_INVITEE_EMAIL/PASSWORD can point at a different family-role account instead.
+import { test, expect, request as pwRequest, type APIRequestContext } from '@playwright/test';
 import { API, BASE, CSRF, USERS, apiAs, dashboardCard, me, ok, resolveIds, safeText, type Ids } from '../helpers';
-import { request as pwRequest } from '@playwright/test';
 import type { InviteDTO, MemberDTO } from '../../../packages/shared/src/api';
-
-const INVITEE = {
-  email: process.env.FG_E2E_INVITEE_EMAIL ?? USERS.admin.email,
-  password: process.env.FG_E2E_INVITEE_PASSWORD ?? USERS.admin.password,
-};
 
 let somsri: APIRequestContext; let invitee: APIRequestContext; let nok: APIRequestContext; let ids: Ids;
 let inviteeId: string;
 let invite: InviteDTO;
+const useAnan = !process.env.FG_E2E_INVITEE_EMAIL;
 
 test.describe.configure({ mode: 'serial' });
 test.beforeAll(async () => {
   somsri = await apiAs('somsri');
   nok = await apiAs('nok');
   ids = await resolveIds(somsri);
-  if (process.env.FG_E2E_INVITEE_EMAIL) {
-    invitee = await pwRequest.newContext({ baseURL: BASE });
-    const r = await invitee.post(`${API}/auth/login`, { headers: CSRF, data: INVITEE });
-    expect(r.status(), `invitee login: ${await safeText(r)}`).toBe(200);
+  if (useAnan) {
+    invitee = await apiAs('anan');
+    const del = await somsri.delete(`${API}/me/members/${ids.anan}`, { headers: CSRF, data: { password: USERS.somsri.password } });
+    expect([200, 204], `remove Anan before re-inviting: ${await safeText(del)}`).toContain(del.status());
   } else {
-    invitee = await apiAs('admin');
+    invitee = await pwRequest.newContext({ baseURL: BASE });
+    const r = await invitee.post(`${API}/auth/login`, { headers: CSRF, data: { email: process.env.FG_E2E_INVITEE_EMAIL, password: process.env.FG_E2E_INVITEE_PASSWORD } });
+    expect(r.status(), `invitee login: ${await safeText(r)}`).toBe(200);
   }
   inviteeId = (await me(invitee)).user.id;
 });
 test.afterAll(async () => {
-  // cleanup: remove the invitee if it became a member
   if (somsri && inviteeId) {
     const members = await ok<MemberDTO[]>(await somsri.get(`${API}/me/members`)).catch(() => [] as MemberDTO[]);
-    if (members.some((m) => m.userId === inviteeId)) {
+    const isMember = members.some((m) => m.userId === inviteeId);
+    if (!useAnan && isMember) {
       await somsri.delete(`${API}/me/members/${inviteeId}`, { headers: CSRF, data: { password: USERS.somsri.password } });
+    }
+    if (useAnan && !isMember) {
+      // restore the seeded state: Anan is a confirmed member with zero grants
+      const inv = await ok<InviteDTO>(await somsri.post(`${API}/me/invitations`, { headers: CSRF, data: { inviteeName: 'QA restore Anan', relationship: 'ลูกชาย', role: 'family' } })).catch(() => undefined);
+      if (inv?.token) {
+        await invitee.post(`${API}/invitations/accept`, { headers: CSRF, data: { token: inv.token } });
+        await somsri.post(`${API}/me/invitations/${inv.id}/confirm`, { headers: CSRF, data: { password: USERS.somsri.password } });
+      }
     }
     for (const inv of await ok<InviteDTO[]>(await somsri.get(`${API}/me/invitations`)).catch(() => [] as InviteDTO[])) {
       if (/^QA /.test(inv.inviteeName) && (inv.status === 'pending' || inv.status === 'pending_confirmation')) {
@@ -46,7 +53,7 @@ test.afterAll(async () => {
 });
 
 test('senior creates an invite: link token returned once, high entropy, no spoken code', async () => {
-  invite = await ok<InviteDTO>(await somsri.post(`${API}/me/invitations`, { headers: CSRF, data: { inviteeName: 'QA หลานทดสอบ', relationship: 'หลาน', role: 'family' } }));
+  invite = await ok<InviteDTO>(await somsri.post(`${API}/me/invitations`, { headers: CSRF, data: { inviteeName: 'QA อนันต์ (re-invite)', relationship: 'ลูกชาย', role: 'family' } }));
   expect(invite.status).toBe('pending');
   expect(invite.token, 'token returned once on create').toBeTruthy();
   expect(invite.token!.length, 'token >= 128 bits (>= 22 base64url chars / 32 hex chars)').toBeGreaterThanOrEqual(22);

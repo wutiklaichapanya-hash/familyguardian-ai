@@ -4,7 +4,7 @@ import { API, CSRF, apiAs, helpRequest, ok, resolveIds, restoreSeedGrants, revok
 import type { AlertDTO } from '../../../packages/shared/src/api';
 
 let somsri: APIRequestContext; let nok: APIRequestContext; let pim: APIRequestContext; let ids: Ids;
-test.describe.configure({ mode: 'serial' });
+// Not serial: each test restores grants itself, so one failure does not hide the others.
 test.beforeAll(async () => {
   [somsri, nok, pim] = await Promise.all([apiAs('somsri'), apiAs('nok'), apiAs('pim')]);
   ids = await resolveIds(somsri);
@@ -41,7 +41,11 @@ test('Nok acknowledges -> senior sees acknowledgedBy Nok (AC-8)', async () => {
   const a = mine.find((x) => x.id === alert.id)!;
   expect(a.acknowledgedBy?.userId).toBe(ids.nok);
   expect(a.acknowledgedBy?.name).toMatch(/นก|Nok/);
-  expect(a.deliveries.find((d) => d.recipientId === ids.nok)?.state).toBe('acknowledged');
+  // delivery state should reach 'acknowledged' (S-07: Queued -> Sent -> Seen/Acknowledged); allow the queue 10 s
+  await expect.poll(async () => {
+    const m = await ok<AlertDTO[]>(await somsri.get(`${API}/me/alerts`));
+    return m.find((x) => x.id === alert.id)?.deliveries.find((d) => d.recipientId === ids.nok)?.state;
+  }, { timeout: 10_000 }).toBe('acknowledged');
   const logs = await ok<{ kind: string }[]>(await somsri.get(`${API}/me/action-logs`));
   expect(logs.some((l) => l.kind === 'help_request_sent')).toBe(true);
 });

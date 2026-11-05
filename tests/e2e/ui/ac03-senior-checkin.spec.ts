@@ -26,7 +26,7 @@ test('AC-3: Somsri signs in, lands on Home (<= 6 main tiles) and checks in withi
   await page.getByRole('radio', { name: /ก็ดี|Okay/ }).check();
   await page.getByRole('button', { name: /บันทึกเช็กอิน|Save check-in/ }).click();
 
-  await expect(page.getByText(/บันทึกเช็กอินแล้ว|Check-in saved/)).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: /บันทึก(เช็กอิน)?แล้ว|saved/i }).first()).toBeVisible();
   const text = await pageText(page);
   expect(text).not.toMatch(/คะแนนอารมณ์|mood score|ซึมเศร้า|depression/i);
 });
@@ -35,7 +35,7 @@ test('AC-3: the saved check-in appears in the senior trend; gaps show "no data",
   await loginBrowser(context, 'somsri');
   await page.goto('/checkin');
   await settle(page);
-  await expect(page.getByText(/บันทึกของฉัน 14 วันล่าสุด|My last 14 days/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: /บันทึกของฉัน|My (last 14 days|check-ins|record)/ })).toBeVisible();
   const text = await pageText(page);
   expect(text).toMatch(/ก็ดี|Okay|มีความสุข|Happy|เหงา|กังวล|เหนื่อย|ไม่อยากตอบ/);
   expect(text).not.toMatch(/ลดลง|แย่ลง|decline|dropped|worse/i);
@@ -48,6 +48,6 @@ test('AC-3: "only me" option exists and confirms it is kept private', async ({ p
   await page.getByRole('radio', { name: /ไม่อยากตอบ|Prefer not to answer/ }).check();
   await page.getByLabel(/เก็บไว้ดูคนเดียว|Keep this to myself/).check();
   await page.getByRole('button', { name: /บันทึกเช็กอิน|Save check-in/ }).click();
-  await expect(page.getByText(/บันทึกเช็กอินแล้ว|Check-in saved/)).toBeVisible();
-  await expect(page.getByText(/แชร์กับ: เฉพาะฉัน|kept for you only/).first()).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: /บันทึก(เช็กอิน)?แล้ว|saved/i }).first()).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: /เฉพาะฉัน|only me|kept for you only/i }).first()).toBeVisible();
 });

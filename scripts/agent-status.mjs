@@ -51,6 +51,8 @@ const AGENTS = [
     ['verification evidence', /^docs\/research\/help_directory_verification\.md$/] ] },
   { id: 'codex-ux', agent: 'Codex (OpenAI) UX design review', area: 'docs/design', items: [
     ['design proposal', /^docs\/design\/CODEX_UX_DESIGN_01\.md$/] ] },
+  { id: 'web-p0', agent: 'Frontend pass 2 (Codex P0 fixes, worktree)', area: 'apps/web', items: [['merged to main', /^docs\/decisions\/merged_web_p0\.flag$/]] },
+  { id: 'api-v03', agent: 'Backend pass 2 (contract v0.3, worktree)', area: 'services/api', items: [['merged to main', /^docs\/decisions\/merged_api_v03\.flag$/]] },
 ];
 const statePath = join(ROOT, 'docs/decisions/agent_state.json');
 const state = existsSync(statePath) ? JSON.parse(readFileSync(statePath, 'utf8')) : {};

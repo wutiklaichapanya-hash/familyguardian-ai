@@ -33,7 +33,7 @@ test('AC-5: Thai fake-bank SMS -> caution/high risk with reasons, uncertainty, s
   // at least one plain-language reason (signal label) is shown
   expect(r).toMatch(/แอบอ้าง|เร่ง|OTP|รหัส|ลิงก์|Pretends|quickly|OTP|link/i);
   // "ask family" and "call 1441"
-  await expect(page.getByRole('button', { name: /ส่งให้ครอบครัวช่วยดู|Ask family to take a look/ }).or(page.getByRole('link', { name: /ส่งให้ครอบครัวช่วยดู|Ask family/ })).first()).toBeVisible();
+  await expect(page.getByRole('region', { name: /ส่งให้ครอบครัวช่วยดู|Ask family/ }).or(page.getByRole('button', { name: /ส่งให้ครอบครัวช่วยดู|Ask family/ })).first()).toBeVisible();
   await expect(page.locator('a[href^="tel:1441"]').first()).toBeVisible();
   // "ปลอดภัย" (safe) is never part of the verdict
   expect(r).not.toContain('ปลอดภัย');

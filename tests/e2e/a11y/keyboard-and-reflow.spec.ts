@@ -33,7 +33,7 @@ test('keyboard only: Somsri completes a check-in with Tab / Space / Enter, focus
   const reachedSubmit = await tabUntil(page, `(el) => el && el.tagName === 'BUTTON' && el.type === 'submit'`);
   expect(reachedSubmit, 'the save button is reachable by Tab').toBe(true);
   await page.keyboard.press('Enter');
-  await expect(page.getByText(/บันทึกเช็กอินแล้ว|Check-in saved/)).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: /บันทึก(เช็กอิน)?แล้ว|saved/i }).first()).toBeVisible();
 });
 
 test('skip link is the first focusable element on the senior home', async ({ page, context }) => {
