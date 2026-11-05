@@ -226,7 +226,8 @@ html[data-audience='senior'] :is(.brand, .tab, .link-button, .lang-btn, .back-li
 .avatar {
   display: inline-grid; place-items: center; flex: none; width: 48px; height: 48px; border-radius: 50%;
   background: linear-gradient(145deg, var(--sage-2), var(--sage)); color: var(--brand-deep);
-  font-family: var(--font-display); font-weight: 600; font-size: 1.1rem; line-height: 1; box-shadow: inset 0 0 0 2px var(--surface);
+  /* Looped body face: a lone Thai initial (e.g. น) in loopless Prompt reads like Latin "u". */
+  font-family: var(--font); font-weight: 700; font-size: 1.2rem; line-height: 1; box-shadow: inset 0 0 0 2px var(--surface);
 }
 @media (prefers-color-scheme: dark) { .avatar { color: var(--ink); } }
 .avatar-sm { width: 40px; height: 40px; font-size: 0.95rem; }
