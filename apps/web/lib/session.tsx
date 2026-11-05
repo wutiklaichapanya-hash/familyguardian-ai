@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { MeRes, Role } from '@fg/shared';
 import { api, ApiError, clearClientCaches } from './api';
 import { useApplyUserLocale } from './i18n';
@@ -16,6 +16,11 @@ interface SessionValue {
 }
 
 const SessionContext = createContext<SessionValue | null>(null);
+
+/** localStorage key written on confirmed sign-out so other tabs leave too. Holds only a timestamp. */
+const SIGNOUT_KEY = 'fg-signed-out';
+/** Query flag on "/" when the server could not confirm sign-out. */
+export const SIGNOUT_FAILED_PARAM = 'signout';
 
 export function homePathFor(role: Role): string {
   switch (role) {
@@ -56,21 +61,63 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [setMe]);
 
   const logout = useCallback(async () => {
+    let confirmed = true;
     try {
       await api.logout();
-    } catch {
-      /* still clear locally */
-    } finally {
-      setMe(null);
-      await clearClientCaches();
-      // Full reload so no personal data stays in React state or the router cache.
-      window.location.assign('/');
+    } catch (e) {
+      // 401/403 means the server session is already gone; anything else is unconfirmed.
+      confirmed = e instanceof ApiError && (e.status === 401 || e.status === 403);
     }
+    setMe(null);
+    await clearClientCaches();
+    if (confirmed) {
+      // Tell other open tabs to drop their screens too (shared-device privacy, SR-14).
+      try {
+        window.localStorage.setItem(SIGNOUT_KEY, String(Date.now()));
+      } catch {
+        /* storage unavailable */
+      }
+    }
+    // Full reload so no personal data stays in React state or the router cache. If the server did not
+    // confirm sign-out, say so on the next screen instead of implying it succeeded.
+    window.location.assign(confirmed ? '/' : `/?${SIGNOUT_FAILED_PARAM}=1`);
   }, [setMe]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // Shared-device privacy (SR-14): cross-tab sign-out, Back/forward-cache restores and revoked sessions.
+  const wasSignedIn = useRef(false);
+  useEffect(() => {
+    if (status === 'signed_in') wasSignedIn.current = true;
+  }, [status]);
+  useEffect(() => {
+    const leave = () => {
+      void clearClientCaches().finally(() => window.location.assign('/'));
+    };
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === SIGNOUT_KEY && wasSignedIn.current) leave();
+    };
+    const onPageShow = (e: PageTransitionEvent) => {
+      // A page restored from the back/forward cache may still show personal data: reload it fresh.
+      if (e.persisted && wasSignedIn.current) window.location.reload();
+    };
+    const recheck = () => {
+      if (!wasSignedIn.current || document.visibilityState !== 'visible') return;
+      api.me().catch((err) => {
+        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) leave();
+      });
+    };
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('pageshow', onPageShow);
+    document.addEventListener('visibilitychange', recheck);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('pageshow', onPageShow);
+      document.removeEventListener('visibilitychange', recheck);
+    };
+  }, []);
 
   useApplyUserLocale(me?.user);
 

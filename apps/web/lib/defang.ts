@@ -7,3 +7,9 @@ export function defang(text: string): string {
     .replace(/(\S)\.(?=[a-z฀-๿]{2,})/gi, '$1[.]')
     .replace(/(?<!\[)@(?!\])/g, '[@]');
 }
+
+/** True when untrusted text contains something that looks like a phone number (9+ digits, spaces/dashes allowed). */
+export function containsPhoneNumber(text: string): boolean {
+  const runs = text.match(/\+?\d[\d\s-]{6,}\d/g) ?? [];
+  return runs.some((r) => r.replace(/\D/g, '').length >= 9);
+}

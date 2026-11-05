@@ -1,7 +1,7 @@
 // Icon + tone for each status. Colour is never the only signal: every chip also has an icon and a word.
 import type { DashboardStatus, Mood, NotificationState, RiskLevel } from '@fg/shared';
 
-type Tone = 'neutral' | 'ok' | 'warm' | 'alert' | 'brand';
+export type Tone = 'neutral' | 'warm' | 'alert' | 'brand';
 
 export const MOOD_ICON: Record<Mood, string> = {
   happy: '😊',
@@ -33,6 +33,7 @@ export const STATE_VISUAL: Record<NotificationState, { icon: string; tone: Tone 
   sent: { icon: '📨', tone: 'brand' },
   failed: { icon: '↻', tone: 'warm' },
   seen: { icon: '👁', tone: 'brand' },
-  acknowledged: { icon: '✓', tone: 'ok' },
+  // A recorded button press, not resolution: neutral, never a green tick.
+  acknowledged: { icon: '👆', tone: 'neutral' },
   cancelled_no_consent: { icon: '–', tone: 'neutral' },
 };

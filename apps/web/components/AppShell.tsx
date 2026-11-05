@@ -1,19 +1,26 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { useI18n } from '@/lib/i18n';
+import { documentTitle } from '@/lib/routeTitles';
 import { homePathFor, useSession } from '@/lib/session';
 import { LanguageToggle } from './LanguageToggle';
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { t } = useI18n();
   const { me, logout } = useSession();
+  const pathname = usePathname();
   const role = me?.user.role;
 
   const links: { href: string; label: string }[] = [];
   if (role === 'senior') {
-    links.push({ href: '/home', label: t('nav.home') }, { href: '/privacy', label: t('nav.privacy') });
+    links.push(
+      { href: '/home', label: t('nav.home') },
+      { href: '/notifications', label: t('nav.notifications') },
+      { href: '/privacy', label: t('nav.privacy') },
+    );
   } else if (role === 'family' || role === 'caregiver') {
     links.push(
       { href: '/family', label: t('nav.dashboard') },
@@ -26,6 +33,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <>
+      {/* Route-specific, localised title (WCAG 2.4.2). React hoists <title> into <head>; the root
+          layout deliberately sets no metadata title so this is the only one. */}
+      <title>{documentTitle(pathname, t)}</title>
       <a className="skip-link" href="#main">
         {t('skip')}
       </a>
@@ -46,7 +56,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             <ul>
               {links.map((l) => (
                 <li key={l.href}>
-                  <Link href={l.href}>{l.label}</Link>
+                  <Link href={l.href} aria-current={pathname === l.href ? 'page' : undefined}>
+                    {l.label}
+                  </Link>
                 </li>
               ))}
               <li>

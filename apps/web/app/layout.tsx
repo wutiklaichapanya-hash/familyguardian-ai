@@ -13,7 +13,8 @@ const notoThai = Noto_Sans_Thai({
 });
 
 export const metadata: Metadata = {
-  title: { default: 'FamilyGuardian', template: '%s · FamilyGuardian' },
+  // No `title` here: AppShell renders a localised, route-specific <title> (WCAG 2.4.2) and a
+  // metadata title would add a second, generic <title> that browsers would prefer.
   description: 'FamilyGuardian AI — demo with fictional data only.',
   applicationName: 'FamilyGuardian',
   robots: { index: false, follow: false },

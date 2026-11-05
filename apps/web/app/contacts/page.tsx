@@ -5,7 +5,7 @@ import type { ContactDTO } from '@fg/shared';
 import { api } from '@/lib/api';
 import { formatTime } from '@/lib/i18n/format';
 import { useI18n } from '@/lib/i18n';
-import { BackHome, ConfirmDialog, ErrorText, RequireRole, Status, TelLink, useErrorMessage } from '@/components/ui';
+import { AlertRegion, BackHome, ConfirmDialog, ErrorSummary, ErrorText, LoadError, RequireRole, Status, TelLink, useErrorMessage } from '@/components/ui';
 
 const PHONE_RE = /^\+?[\d\s-]{9,15}$/;
 
@@ -52,7 +52,11 @@ function ContactsInner() {
     if (!PHONE_RE.test(phone.trim()) || digits.length < 9 || digits.length > 10) errs.phone = t('contacts.phoneInvalid');
     setFieldErr(errs);
     setFormError('');
-    if (Object.keys(errs).length) return;
+    if (Object.keys(errs).length) {
+      // Move focus to the first invalid field (WCAG 3.3.1); the summary announces all of them.
+      document.getElementById(errs.name ? 'c-name' : errs.relationship ? 'c-rel' : 'c-phone')?.focus();
+      return;
+    }
     try {
       const c = await api.createContact({ name: name.trim(), relationship: relationship.trim(), phone: phone.trim() });
       setContacts((cs) => [...(cs ?? []), c]);
@@ -93,7 +97,7 @@ function ContactsInner() {
           {isCall && <span className="small">{t('contacts.startedNote')}</span>}
         </>
       )}</Status>
-      {loadError && <p role="alert">{loadError}</p>}
+      <LoadError message={loadError} onRetry={() => void load()} />
       {!contacts && !loadError && <p>{t('common.loading')}</p>}
       {contacts && contacts.length === 0 && <p>{t('contacts.empty')}</p>}
       {contacts && contacts.length > 0 && (
@@ -101,10 +105,12 @@ function ContactsInner() {
           {contacts.map((c) => (
             <li key={c.id} className="stack">
               <TelLink phone={c.phone} onCall={() => onCall(c)} className="btn btn-primary btn-block">
-                {t('contacts.callBtn', { name: c.name, relationship: c.relationship })}
+                <span className="call-label">
+                  {t('contacts.callBtn', { name: c.name, relationship: c.relationship })}
+                  <span className="small call-number">{c.phone}</span>
+                </span>
               </TelLink>
               <div className="row">
-                <span className="muted small">{c.phone}</span>
                 <button type="button" className="link-button" onClick={() => setToRemove(c)}>
                   {t('contacts.remove', { name: c.name })}
                 </button>
@@ -117,6 +123,13 @@ function ContactsInner() {
       <section aria-labelledby="add-h" className="card">
         <h2 id="add-h">{t('contacts.addTitle')}</h2>
         <form onSubmit={onAdd} noValidate>
+          <ErrorSummary
+            errors={[
+              ...(fieldErr.name ? [{ fieldId: 'c-name', label: t('contacts.name'), message: fieldErr.name }] : []),
+              ...(fieldErr.relationship ? [{ fieldId: 'c-rel', label: t('contacts.relationship'), message: fieldErr.relationship }] : []),
+              ...(fieldErr.phone ? [{ fieldId: 'c-phone', label: t('contacts.phone'), message: fieldErr.phone }] : []),
+            ]}
+          />
           <div className="field">
             <label htmlFor="c-name">{t('contacts.name')}</label>
             <input id="c-name" type="text" value={name} onChange={(e) => setName(e.target.value)} aria-invalid={!!fieldErr.name || undefined} aria-describedby={fieldErr.name ? 'c-name-err' : undefined} />
@@ -133,7 +146,7 @@ function ContactsInner() {
             <input id="c-phone" type="tel" inputMode="tel" autoComplete="off" value={phone} onChange={(e) => setPhone(e.target.value)} aria-invalid={!!fieldErr.phone || undefined} aria-describedby={`c-phone-hint${fieldErr.phone ? ' c-phone-err' : ''}`} />
             <ErrorText id="c-phone-err">{fieldErr.phone}</ErrorText>
           </div>
-          <div role="alert"><ErrorText>{formError}</ErrorText></div>
+          <AlertRegion>{formError}</AlertRegion>
           <button type="submit" className="btn btn-secondary btn-block">{t('contacts.add')}</button>
         </form>
       </section>

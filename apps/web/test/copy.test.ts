@@ -80,7 +80,8 @@ describe('source files', () => {
     expect(files.length).toBeGreaterThan(10);
     const bad: string[] = [];
     for (const f of files) {
-      const text = readFileSync(f, 'utf8');
+      // The CSS env() name `safe-area-inset-*` is a platform token, not a verdict; strip only that.
+      const text = readFileSync(f, 'utf8').replace(/\bsafe-area-inset-(?:top|right|bottom|left)\b/g, '');
       for (const h of hits(text)) bad.push(`${relative(ROOT, f)}: "${h}"`);
     }
     expect(bad).toEqual([]);

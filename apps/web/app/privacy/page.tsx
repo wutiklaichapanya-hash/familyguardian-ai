@@ -10,9 +10,13 @@ import { formatDateTime, formatLongDate } from '@/lib/i18n/format';
 import { useI18n } from '@/lib/i18n';
 import { SessionsSection } from '@/components/SessionsSection';
 import { StepUpDialog } from '@/components/StepUpDialog';
-import { BackHome, Chip, ConfirmDialog, ErrorText, RequireRole, Status, useErrorMessage } from '@/components/ui';
+import {
+  AlertRegion, BackHome, Chip, ConfirmDialog, ErrorSummary, ErrorText, LoadError, RequireRole, Status, useErrorMessage,
+} from '@/components/ui';
 
 const EXPIRY_DAYS = [30, 90, 365] as const;
+const SECTIONS = ['members', 'grants', 'invites', 'log'] as const;
+type Section = (typeof SECTIONS)[number];
 
 type StepUp =
   | { kind: 'grant'; member: MemberDTO; category: ShareCategory }
@@ -30,10 +34,12 @@ function PrivacyInner() {
   const { t, locale } = useI18n();
   const errMsg = useErrorMessage();
   const [members, setMembers] = useState<MemberDTO[] | null>(null);
-  const [grants, setGrants] = useState<GrantDTO[]>([]);
-  const [invites, setInvites] = useState<InviteDTO[]>([]);
+  // null = not loaded. Each dataset loads and fails independently (Codex UX P0 #11): a failed
+  // access-log request must never hide the sharing controls.
+  const [grants, setGrants] = useState<GrantDTO[] | null>(null);
+  const [invites, setInvites] = useState<InviteDTO[] | null>(null);
   const [log, setLog] = useState<AccessLogDTO[] | null>(null);
-  const [loadError, setLoadError] = useState('');
+  const [loadErrors, setLoadErrors] = useState<Partial<Record<Section, string>>>({});
   const [status, setStatus] = useState('');
   const [expiryDays, setExpiryDays] = useState<number>(90);
   const [toRevoke, setToRevoke] = useState<{ grant: GrantDTO; member: MemberDTO } | null>(null);
@@ -48,30 +54,37 @@ function PrivacyInner() {
 
   const cat = (c: ShareCategory) => t(`cat.${c}`);
 
-  const load = useCallback(async () => {
+  const loadSection = useCallback(async (s: Section) => {
+    setLoadErrors((e) => ({ ...e, [s]: '' }));
     try {
-      const [m, g, i, a] = await Promise.all([api.members(), api.grants(), api.invitations(), api.accessLog()]);
-      setMembers(m);
-      setGrants(g);
-      setInvites(i);
-      setLog(a);
-      setLoadError('');
+      if (s === 'members') setMembers(await api.members());
+      else if (s === 'grants') setGrants(await api.grants());
+      else if (s === 'invites') setInvites(await api.invitations());
+      else setLog(await api.accessLog());
     } catch (e) {
-      setLoadError(errMsg(e));
+      setLoadErrors((errs) => ({ ...errs, [s]: errMsg(e) }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  const load = useCallback(async () => {
+    await Promise.all(SECTIONS.map((s) => loadSection(s)));
+  }, [loadSection]);
   useEffect(() => {
     void load();
   }, [load]);
 
+  const sectionError = (s: Section) =>
+    loadErrors[s] ? (
+      <LoadError message={`${t('privacy.sectionFailed')} — ${loadErrors[s]}`} onRetry={() => void loadSection(s)} />
+    ) : null;
+
   const activeGrant = (userId: string, c: ShareCategory) =>
-    grants.find((g) => g.granteeUserId === userId && g.category === c && isGrantActive(g));
+    (grants ?? []).find((g) => g.granteeUserId === userId && g.category === c && isGrantActive(g));
 
   async function doGrant(member: MemberDTO, category: ShareCategory, password?: string) {
     const expiresAt = new Date(Date.now() + expiryDays * 86400_000).toISOString();
     const g = await api.createGrant({ granteeUserId: member.userId, category, expiresAt, password });
-    setGrants((gs) => [...gs, g]);
+    setGrants((gs) => [...(gs ?? []), g]);
     setStatus(t('privacy.granted', { category: cat(category), name: member.name, date: formatLongDate(g.expiresAt, locale) }));
   }
 
@@ -93,7 +106,7 @@ function PrivacyInner() {
     if (!r) return;
     try {
       const g = await api.revokeGrant(r.grant.id);
-      setGrants((gs) => gs.map((x) => (x.id === g.id ? g : x)));
+      setGrants((gs) => (gs ?? []).map((x) => (x.id === g.id ? g : x)));
       setStatus(t('privacy.revoked', { category: cat(r.grant.category), name: r.member.name }));
       void load();
     } catch (e) {
@@ -133,7 +146,11 @@ function PrivacyInner() {
     if (!invName.trim()) errs.name = t('contacts.fieldRequired');
     if (!invRel.trim()) errs.rel = t('contacts.fieldRequired');
     setInvErr(errs);
-    if (errs.name || errs.rel) return;
+    if (errs.name || errs.rel) {
+      // Move focus to the first invalid field (WCAG 3.3.1); the summary above announces all of them.
+      document.getElementById(errs.name ? 'inv-name' : 'inv-rel')?.focus();
+      return;
+    }
     try {
       const inv = await api.invite({ inviteeName: invName.trim(), relationship: invRel.trim(), role: invRole });
       setCreated(inv);
@@ -147,8 +164,12 @@ function PrivacyInner() {
     }
   }
 
-  const pendingConfirm = invites.filter((i) => i.status === 'pending_confirmation');
-  const otherInvites = invites.filter((i) => i.status !== 'pending_confirmation');
+  const pendingConfirm = (invites ?? []).filter((i) => i.status === 'pending_confirmation');
+  const otherInvites = (invites ?? []).filter((i) => i.status !== 'pending_confirmation');
+  const invSummary = [
+    ...(invErr.name ? [{ fieldId: 'inv-name', label: t('privacy.inviteName'), message: invErr.name }] : []),
+    ...(invErr.rel ? [{ fieldId: 'inv-rel', label: t('privacy.inviteRel'), message: invErr.rel }] : []),
+  ];
   const createdLink = created ? inviteLink(created) : null;
 
   let stepUpTitle = '';
@@ -172,11 +193,12 @@ function PrivacyInner() {
       <p className="notice">{t('privacy.review')}</p>
       <p className="muted small">{t('coercion.note')}</p>
       <Status className="notice">{status}</Status>
-      {loadError && <p role="alert">{loadError}</p>}
 
       <section aria-labelledby="pc-h" className="card">
         <h2 id="pc-h">{t('privacy.pendingConfirmTitle')}</h2>
-        {pendingConfirm.length === 0 ? (
+        {sectionError('invites')}
+        {!invites && !loadErrors.invites && <p>{t('common.loading')}</p>}
+        {!invites ? null : pendingConfirm.length === 0 ? (
           <p className="muted">{t('privacy.noPendingConfirm')}</p>
         ) : (
           <ul className="list-plain">
@@ -216,7 +238,9 @@ function PrivacyInner() {
             ))}
           </select>
         </div>
-        {!members && !loadError && <p>{t('common.loading')}</p>}
+        {sectionError('members')}
+        {sectionError('grants')}
+        {!members && !loadErrors.members && <p>{t('common.loading')}</p>}
         {members && members.length === 0 && <p>{t('privacy.noMembers')}</p>}
         {members?.map((m) => (
           <section key={m.userId} className="card" aria-labelledby={`m-${m.userId}`}>
@@ -233,6 +257,9 @@ function PrivacyInner() {
                       <br />
                       {forbidden ? (
                         <span className="muted small">{t('privacy.caregiverForbidden')}</span>
+                      ) : !grants ? (
+                        // Unknown is never shown as "not shared".
+                        <span className="muted small">{loadErrors.grants ? t('privacy.sectionFailed') : t('common.loading')}</span>
                       ) : g ? (
                         <Chip tone="brand" icon="👁">{t('privacy.sharedUntil', { date: formatLongDate(g.expiresAt, locale) })}</Chip>
                       ) : (
@@ -240,6 +267,7 @@ function PrivacyInner() {
                       )}
                     </span>
                     {!forbidden &&
+                      grants &&
                       (g ? (
                         <button type="button" className="btn btn-secondary" aria-label={t('privacy.revokeAria', { category: cat(c), name: m.name })} onClick={() => setToRevoke({ grant: g, member: m })}>
                           {t('privacy.revokeBtn')}
@@ -264,6 +292,7 @@ function PrivacyInner() {
         <h2 id="invite-h">{t('privacy.inviteTitle')}</h2>
         <p className="muted small">{t('privacy.inviteNoGrants')}</p>
         <form onSubmit={onInvite} noValidate>
+          <ErrorSummary errors={invSummary} />
           <div className="field">
             <label htmlFor="inv-name">{t('privacy.inviteName')}</label>
             <input id="inv-name" type="text" value={invName} onChange={(e) => setInvName(e.target.value)} aria-invalid={!!invErr.name || undefined} aria-describedby={invErr.name ? 'inv-name-err' : undefined} />
@@ -285,7 +314,7 @@ function PrivacyInner() {
               ))}
             </div>
           </fieldset>
-          <div role="alert"><ErrorText>{invErr.form}</ErrorText></div>
+          <AlertRegion>{invErr.form}</AlertRegion>
           <button type="submit" className="btn btn-primary btn-block">{t('privacy.inviteSubmit')}</button>
         </form>
         {created && (
@@ -321,7 +350,9 @@ function PrivacyInner() {
 
       <section aria-labelledby="inv-list-h" className="card">
         <h2 id="inv-list-h">{t('privacy.pendingTitle')}</h2>
-        {otherInvites.length === 0 ? (
+        {!invites ? (
+          <p className="muted">{loadErrors.invites ? t('privacy.sectionFailed') : t('common.loading')}</p>
+        ) : otherInvites.length === 0 ? (
           <p className="muted">{t('privacy.noInvites')}</p>
         ) : (
           <ul className="list-plain">
@@ -346,7 +377,8 @@ function PrivacyInner() {
 
       <section aria-labelledby="log-h" className="card">
         <h2 id="log-h">{t('privacy.logTitle')}</h2>
-        {!log && !loadError && <p>{t('common.loading')}</p>}
+        {sectionError('log')}
+        {!log && !loadErrors.log && <p>{t('common.loading')}</p>}
         {log && log.length === 0 && <p className="muted">{t('privacy.logEmpty')}</p>}
         {log && log.length > 0 && (
           <ul className="list-plain">

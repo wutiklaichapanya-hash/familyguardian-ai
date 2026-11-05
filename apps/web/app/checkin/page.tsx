@@ -4,11 +4,12 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { MOOD_LABELS, MOODS, type CheckinDTO, type Mood } from '@fg/shared';
 import { api, isGrantActive } from '@/lib/api';
+import { buildCheckinRequest, INITIAL_AUDIENCE, shareAvailability, type Audience, type Recipients } from '@/lib/checkin';
 import { formatDate, formatTime } from '@/lib/i18n/format';
 import { useI18n } from '@/lib/i18n';
 import { buildTrend } from '@/lib/trend';
 import { MOOD_ICON } from '@/lib/visual';
-import { BackHome, ErrorText, RequireRole, Status, useErrorMessage } from '@/components/ui';
+import { AlertRegion, BackHome, ErrorText, LoadError, RequireRole, Status, useErrorMessage } from '@/components/ui';
 
 function CheckinInner() {
   const { t, l, locale } = useI18n();
@@ -16,25 +17,38 @@ function CheckinInner() {
   const [mood, setMood] = useState<Mood | null>(null);
   const [note, setNote] = useState('');
   const [noteShared, setNoteShared] = useState(false);
-  const [onlyMe, setOnlyMe] = useState(false);
+  // Private by default (UX §1.4): the senior must actively choose to share.
+  const [audience, setAudience] = useState<Audience>(INITIAL_AUDIENCE);
   const [moodError, setMoodError] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState<CheckinDTO | null>(null);
+  const [savedNames, setSavedNames] = useState<string[]>([]);
   const [history, setHistory] = useState<CheckinDTO[] | null>(null);
   const [historyError, setHistoryError] = useState('');
   const confirmRef = useRef<HTMLDivElement>(null);
-  const [checkinGrantees, setCheckinGrantees] = useState<string[] | null>(null);
+  const [recipients, setRecipients] = useState<Recipients>(null);
 
-  useEffect(() => {
+  const loadRecipients = useCallback(() => {
+    setRecipients(null);
     api
       .grants()
       .then((gs) => {
         const names = gs.filter((g) => g.category === 'checkins' && isGrantActive(g)).map((g) => g.granteeName);
-        setCheckinGrantees([...new Set(names)]);
+        setRecipients([...new Set(names)]);
       })
-      .catch(() => setCheckinGrantees(null));
+      .catch(() => setRecipients('error'));
   }, []);
+
+  useEffect(() => {
+    loadRecipients();
+  }, [loadRecipients]);
+
+  const availability = shareAvailability(recipients);
+  // If lookup fails or nobody holds access, the sharing option is unavailable; fall back to private.
+  useEffect(() => {
+    if (availability !== 'available' && audience === 'shared') setAudience('only_me');
+  }, [availability, audience]);
 
   const loadHistory = useCallback(async () => {
     try {
@@ -60,13 +74,10 @@ function CheckinInner() {
     }
     setBusy(true);
     try {
-      const c = await api.createCheckin({
-        mood,
-        note: note.trim() || undefined,
-        noteShared: !onlyMe && noteShared && !!note.trim(),
-        onlyMe,
-      });
+      const req = buildCheckinRequest({ mood, note, noteShared, audience, recipients });
+      const c = await api.createCheckin(req);
       setSaved(c);
+      setSavedNames(!req.onlyMe && Array.isArray(recipients) ? recipients : []);
       void loadHistory();
       requestAnimationFrame(() => confirmRef.current?.focus());
     } catch (err) {
@@ -76,12 +87,18 @@ function CheckinInner() {
     }
   }
 
+  // TODO(contract): UX §2 asks for a 10-second Undo / correction of a check-in. The API (contract v0.2)
+  // only exposes create + history (no delete/retract), so no Undo is shown until a real retraction
+  // endpoint exists. Requested in the agent report.
   function reset() {
     setSaved(null);
     setMood(null);
     setNote('');
     setNoteShared(false);
-    setOnlyMe(false);
+    setAudience(INITIAL_AUDIENCE);
+    setSavedNames([]);
+    // The focused confirmation is removed: move focus to the first answer (WCAG 2.4.3).
+    requestAnimationFrame(() => document.getElementById(`mood-${MOODS[0]}`)?.focus());
   }
 
   const trend = history ? buildTrend(history, 14) : null;
@@ -105,11 +122,9 @@ function CheckinInner() {
           <p>
             {saved.onlyMe
               ? t('checkin.savedOnlyMe')
-              : checkinGrantees && checkinGrantees.length > 0
-                ? t('checkin.savedSharedWith', { names: checkinGrantees.join(', ') })
-                : checkinGrantees
-                  ? t('checkin.savedOnlyMe')
-                  : t('checkin.savedShared')}
+              : savedNames.length > 0
+                ? t('checkin.savedSharedWith', { names: savedNames.join(', ') })
+                : t('checkin.savedShared')}
           </p>
           <button type="button" className="btn btn-secondary" onClick={reset}>
             {t('checkin.again')}
@@ -149,35 +164,74 @@ function CheckinInner() {
             <textarea id="note" value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} aria-describedby="note-hint" />
           </div>
 
+          {/* Explicit audience choice. Per-recipient selection would need a contract change (CreateCheckinReq has only onlyMe). */}
           <fieldset>
-            <legend>{t('nav.privacy')}</legend>
-            <label className="check" htmlFor="onlyMe">
-              <input id="onlyMe" type="checkbox" checked={onlyMe} onChange={(e) => setOnlyMe(e.target.checked)} aria-describedby="onlyMe-hint" />
-              <span>
-                {t('checkin.onlyMe')}
-                <span id="onlyMe-hint" className="hint">{t('checkin.onlyMeHint')}</span>
-              </span>
-            </label>
-            <label className="check" htmlFor="noteShared">
+            <legend>{t('checkin.audienceLegend')}</legend>
+            <label className="check" htmlFor="aud-only-me">
               <input
-                id="noteShared"
-                type="checkbox"
-                checked={noteShared && !onlyMe}
-                disabled={onlyMe || !note.trim()}
-                onChange={(e) => setNoteShared(e.target.checked)}
-                aria-describedby="noteShared-hint"
+                id="aud-only-me"
+                type="radio"
+                name="audience"
+                value="only_me"
+                checked={audience === 'only_me'}
+                onChange={() => setAudience('only_me')}
+                aria-describedby="aud-only-me-hint"
               />
               <span>
-                {t('checkin.shareNote')}
-                <span id="noteShared-hint" className="hint">{t('checkin.shareNoteHint')}</span>
+                {t('checkin.onlyMe')}
+                <span id="aud-only-me-hint" className="hint">{t('checkin.onlyMeHint')}</span>
               </span>
             </label>
-            <p className="hint">{t('checkin.sharingDefault')}</p>
+            <label className="check" htmlFor="aud-shared">
+              <input
+                id="aud-shared"
+                type="radio"
+                name="audience"
+                value="shared"
+                checked={audience === 'shared'}
+                disabled={availability !== 'available'}
+                onChange={() => setAudience('shared')}
+                aria-describedby="aud-shared-hint"
+              />
+              <span>
+                {t('checkin.shareOption')}
+                <span id="aud-shared-hint" className="hint">
+                  {availability === 'loading' && t('checkin.shareLoading')}
+                  {availability === 'error' && t('checkin.shareUnavailable')}
+                  {availability === 'nobody' && t('checkin.shareNobody')}
+                  {availability === 'available' && Array.isArray(recipients) && t('checkin.sharingDefault', { names: recipients.join(', ') })}
+                </span>
+              </span>
+            </label>
+            {availability === 'error' && (
+              <button type="button" className="btn btn-secondary" onClick={loadRecipients}>
+                {t('common.retry')}
+              </button>
+            )}
+            {availability === 'nobody' && (
+              <p>
+                <Link href="/privacy">{t('nav.privacy')}</Link>
+              </p>
+            )}
+            {audience === 'shared' && (
+              <label className="check" htmlFor="noteShared">
+                <input
+                  id="noteShared"
+                  type="checkbox"
+                  checked={noteShared}
+                  disabled={!note.trim()}
+                  onChange={(e) => setNoteShared(e.target.checked)}
+                  aria-describedby="noteShared-hint"
+                />
+                <span>
+                  {t('checkin.shareNote')}
+                  <span id="noteShared-hint" className="hint">{t('checkin.shareNoteHint')}</span>
+                </span>
+              </label>
+            )}
           </fieldset>
 
-          <div role="alert">
-            <ErrorText>{error}</ErrorText>
-          </div>
+          <AlertRegion>{error}</AlertRegion>
           <button type="submit" className="btn btn-primary btn-block" disabled={busy}>
             {busy ? t('checkin.saving') : t('checkin.submit')}
           </button>
@@ -201,7 +255,7 @@ function CheckinInner() {
       <section aria-labelledby="trend-h" className="card">
         <h2 id="trend-h">{t('checkin.trendTitle')}</h2>
         <p className="muted small">{t('checkin.trendHint')}</p>
-        {historyError && <p>{historyError}</p>}
+        <LoadError message={historyError} onRetry={() => void loadHistory()} />
         {!trend && !historyError && <Status>{t('common.loading')}</Status>}
         {trend && (
           <ol className="trend">

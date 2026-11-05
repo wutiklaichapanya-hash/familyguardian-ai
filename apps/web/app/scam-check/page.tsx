@@ -4,11 +4,11 @@ import Link from 'next/link';
 import { useRef, useState, type FormEvent } from 'react';
 import { RISK_LABELS, type ScamAssessmentDTO } from '@fg/shared';
 import { api } from '@/lib/api';
-import { defang } from '@/lib/defang';
+import { containsPhoneNumber, defang } from '@/lib/defang';
 import { useI18n } from '@/lib/i18n';
 import { RISK_VISUAL } from '@/lib/visual';
 import { SharePanel } from '@/components/SharePanel';
-import { BackHome, Chip, ErrorText, RequireRole, Status, useErrorMessage } from '@/components/ui';
+import { AlertRegion, BackHome, Chip, RequireRole, Status, useErrorMessage } from '@/components/ui';
 
 function ScamInner() {
   const { t, l, locale } = useI18n();
@@ -81,15 +81,13 @@ function ScamInner() {
             <label htmlFor="scam-url">{t('scam.url')}</label>
             <span id="scam-url-hint" className="hint">{t('scam.urlHint')}</span>
             {/* type=text, not url: we never treat it as a navigable link */}
-            <input id="scam-url" type="text" inputMode="url" autoComplete="off" spellCheck={false} value={url} onChange={(e) => setUrl(e.target.value)} aria-describedby="scam-url-hint" />
+            <input id="scam-url" type="text" inputMode="url" autoComplete="off" spellCheck={false} maxLength={2048} value={url} onChange={(e) => setUrl(e.target.value)} aria-describedby="scam-url-hint" />
           </div>
           <div className="field">
             <label htmlFor="scam-phone">{t('scam.phone')}</label>
             <input id="scam-phone" type="text" inputMode="tel" autoComplete="off" value={phone} onChange={(e) => setPhone(e.target.value)} />
           </div>
-          <div role="alert">
-            <ErrorText id="scam-error">{error}</ErrorText>
-          </div>
+          <AlertRegion id="scam-error">{error}</AlertRegion>
           <button type="submit" className="btn btn-primary btn-block" disabled={busy}>
             {busy ? t('scam.checking') : t('scam.submit')}
           </button>
@@ -108,7 +106,39 @@ function ScamInner() {
             </p>
             <p>{l(result.explanation)}</p>
 
-            <h3>{t('scam.why')}</h3>
+            {/* Order: verdict → uncertainty → actions → evidence → full text (Codex UX P0 #8). */}
+            <h3>{t('scam.notSure')}</h3>
+            <p>{l(result.uncertainty)}</p>
+          </section>
+
+          <section aria-labelledby="scam-actions-h" className="card">
+            <h2 id="scam-actions-h">{t('pause.actions')}</h2>
+            <div className="stack">
+              {/* Always available, whether or not anyone holds a sharing grant. */}
+              <Link className="btn btn-secondary btn-block" href="/contacts">
+                <span aria-hidden="true">📞 </span>
+                {t('pause.callFamily')}
+              </Link>
+              <a className={result.risk === 'high_risk' ? 'btn btn-danger btn-block' : 'btn btn-secondary btn-block'} href="tel:1441">
+                <span aria-hidden="true">📞 </span>
+                {t('common.call1441')}
+              </a>
+            </div>
+          </section>
+
+          <SharePanel
+            category="scam_checks"
+            title="scam.share"
+            noneKey="scam.shareNone"
+            includesKey="scam.shareIncludes"
+            onShare={async (ids) => {
+              const r = await api.shareScamCheck(result.id, ids);
+              setResult(r);
+            }}
+          />
+
+          <section aria-labelledby="scam-why-h" className="card">
+            <h2 id="scam-why-h">{t('scam.why')}</h2>
             {result.evidence.length === 0 ? (
               <p>{t('scam.noEvidence')}</p>
             ) : (
@@ -116,15 +146,23 @@ function ScamInner() {
                 {result.evidence.map((ev, i) => (
                   <li key={`${ev.signal}-${i}`}>
                     <strong>{t(`signal.${ev.signal}`)}</strong>
-                    {ev.quote && <blockquote className="quote">“{defang(ev.quote)}”</blockquote>}
+                    {ev.quote && (
+                      <>
+                        {/* Untrusted text: labelled as coming from the message, defanged, never a link or tel:. */}
+                        <span className="hint">{t('scam.quoteFrom')}</span>
+                        <blockquote className="quote">“{defang(ev.quote)}”</blockquote>
+                        {containsPhoneNumber(ev.quote) && (
+                          <p className="notice notice-warm small">
+                            <strong>{t('scam.numberWarn')}</strong>
+                          </p>
+                        )}
+                      </>
+                    )}
                     <span>{l(ev.explanation)}</span>
                   </li>
                 ))}
               </ul>
             )}
-
-            <h3>{t('scam.notSure')}</h3>
-            <p>{l(result.uncertainty)}</p>
 
             <h3>{t('scam.steps')}</h3>
             <ol>
@@ -137,27 +175,12 @@ function ScamInner() {
               <details>
                 <summary>{t('scam.submitted')}</summary>
                 <blockquote className="quote">{defang(result.submittedText)}</blockquote>
+                {containsPhoneNumber(result.submittedText) && <p className="small">{t('scam.numberWarn')}</p>}
               </details>
             )}
-
-            <div className="stack">
-              <a className={result.risk === 'high_risk' ? 'btn btn-danger btn-block' : 'btn btn-secondary btn-block'} href="tel:1441">
-                <span aria-hidden="true">📞 </span>
-                {t('common.call1441')}
-              </a>
-            </div>
             <p className="muted small">{t('scam.engine', { version: result.engine.version })}</p>
           </section>
 
-          <SharePanel
-            category="scam_checks"
-            title="scam.share"
-            noneKey="scam.shareNone"
-            onShare={async (ids) => {
-              const r = await api.shareScamCheck(result.id, ids);
-              setResult(r);
-            }}
-          />
           <button type="button" className="btn btn-secondary btn-block" onClick={reset}>
             {t('scam.new')}
           </button>

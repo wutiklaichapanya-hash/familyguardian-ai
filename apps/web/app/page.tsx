@@ -1,15 +1,35 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { useI18n } from '@/lib/i18n';
-import { homePathFor, useSession } from '@/lib/session';
+import { homePathFor, SIGNOUT_FAILED_PARAM, useSession } from '@/lib/session';
 import { LanguageToggle } from '@/components/LanguageToggle';
 
 export default function WelcomePage() {
   const { t } = useI18n();
-  const { me } = useSession();
+  const { me, logout } = useSession();
+  const [signoutFailed, setSignoutFailed] = useState(false);
+
+  useEffect(() => {
+    setSignoutFailed(new URLSearchParams(window.location.search).has(SIGNOUT_FAILED_PARAM));
+  }, []);
+
   return (
     <>
+      {signoutFailed && (
+        // Never imply the server signed this device out when it did not confirm it (SR-14).
+        <div className="notice notice-warm" role="alert">
+          <p>
+            <strong>{t('signout.failed')}</strong>
+          </p>
+          {me && (
+            <button type="button" className="btn btn-secondary" onClick={() => void logout()}>
+              {t('signout.retry')}
+            </button>
+          )}
+        </div>
+      )}
       <h1>{t('welcome.title')}</h1>
       <p className="muted">{t('app.tagline')}</p>
       <section aria-labelledby="lang-h" className="card">
@@ -21,7 +41,6 @@ export default function WelcomePage() {
         <li>{t('welcome.promise2')}</li>
         <li>{t('welcome.promise3')}</li>
       </ul>
-      <p className="notice notice-warm">{t('demo.banner')}</p>
       <div className="stack">
         {me ? (
           <Link className="btn btn-primary btn-block" href={homePathFor(me.user.role)}>
