@@ -25,3 +25,4 @@ export NVM_DIR=~/.nvm; . $NVM_DIR/nvm.sh >/dev/null; export PATH=~/.local/bin:$P
 | anan@demo.fg | Demo-Family-2026 | family | "อนันต์ (Anan)", son; member with ZERO grants |
 | pim@demo.fg | Demo-Care-2026 | caregiver | "พิม (Pim)"; grants: help_requests, care_tasks |
 | admin@demo.fg | Demo-Admin-2026 | admin | operational only |
+| lek@demo.fg | Demo-Family-2026 | family | "เล็ก (Lek)"; NO membership — spare invitee for invite tests |

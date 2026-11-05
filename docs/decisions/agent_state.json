@@ -42,5 +42,9 @@
   "qa": {
     "status": "reported",
     "tests": "E2E 225/227 pass; 2 Medium (ack delivery state, 320px welcome reflow); axe 0 violations on 24 screens"
+  },
+  "api-v03": {
+    "status": "reported",
+    "tests": "api 79/79, ai 114/114 (agent-reported; lead re-run after merge)"
   }
 }
