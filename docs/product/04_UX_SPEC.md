@@ -52,7 +52,7 @@ Dark-mode equivalents are defined in INC-1.
 
 ## 5. Approved status vocabulary (single source in `packages/shared/labels.ts`)
 Dashboard: **No Action Needed / ไม่ต้องดำเนินการ** · **Check In Recommended / ลองทักทายดูนะ** · **Assistance Requested / ขอความช่วยเหลือ** · **Verify Possible Scam / ช่วยตรวจสอบข้อความ**.
-Actions: "เริ่มโทรจากแอป" (call started from app) · "ส่งการแจ้งเตือนถึง [ชื่อ] แล้ว" (alert sent to [name]) · "[ชื่อ] รับทราบแล้ว" ([name] acknowledged) · "ส่งไม่สำเร็จ — กำลังลองใหม่" (sending failed, retrying).
+Actions: "ขอเปิดแอปโทรศัพท์เพื่อโทรหา {name}" (asked the phone app to call {name}) — replaces "เริ่มโทรจากแอป", owner decision 2026-11-05 · "ส่งการแจ้งเตือนถึง [ชื่อ] แล้ว" (alert sent to [name]) · "[ชื่อ] รับทราบแล้ว" ([name] acknowledged) · "ส่งไม่สำเร็จ — กำลังลองใหม่" (sending failed, retrying).
 "Check In Recommended" triggers **only** from explicit signals (e.g. a self-reported "Lonely" or "Worried" that the senior shared), never from missing data alone.
 Forbidden (enforced by test): ปลอดภัยแน่นอน, แจ้งตำรวจแล้ว, เลขคดี, รถพยาบาลกำลังไป, ซึมเศร้า, "definitely safe", "reported to police", "case number", "diagnosed".
 
