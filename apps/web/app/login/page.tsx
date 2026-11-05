@@ -39,9 +39,20 @@ export default function LoginPage() {
       setError(t('login.error.empty'));
       return;
     }
+    await signIn(email.trim(), password);
+  }
+
+  // Demo mode only: one tap signs in to a synthetic account (no typing). Never enabled for real accounts.
+  async function demoSignIn(a: (typeof DEMO_ACCOUNTS)[number]) {
+    setError('');
+    setStatus(t('login.demoSigningIn', { name: a.name }));
+    await signIn(a.email, a.password);
+  }
+
+  async function signIn(em: string, pw: string) {
     setBusy(true);
     try {
-      const me = await api.login({ email: email.trim(), password });
+      const me = await api.login({ email: em, password: pw });
       setMe(me);
       router.push(homePathFor(me.user.role));
     } catch (err) {
@@ -60,23 +71,6 @@ export default function LoginPage() {
         <HeroArt />
         <h1>{t('login.title')}</h1>
       </div>
-      <form onSubmit={onSubmit} noValidate className="card">
-        <div className="field">
-          <label htmlFor="email">{t('login.email')}</label>
-          <input id="email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} aria-invalid={invalid} aria-describedby={error ? 'login-error' : undefined} />
-        </div>
-        <div className="field">
-          <label htmlFor="password">{t('login.password')}</label>
-          <input id="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} aria-invalid={invalid} aria-describedby={error ? 'login-error' : undefined} />
-        </div>
-        <div role="alert">
-          <ErrorText id="login-error">{error}</ErrorText>
-        </div>
-        <button ref={submitRef} type="submit" className="btn btn-primary btn-block" disabled={busy}>
-          {busy ? t('login.submitting') : t('login.submit')}
-        </button>
-      </form>
-
       {DEMO_MODE && (
         <section aria-labelledby="demo-h" className="card">
           <h2 id="demo-h">{t('login.demoTitle')}</h2>
@@ -87,13 +81,8 @@ export default function LoginPage() {
                 <button
                   type="button"
                   className="demo-card"
-                  onClick={() => {
-                    setEmail(a.email);
-                    setPassword(a.password);
-                    setError('');
-                    setStatus(t('login.filled', { name: a.name }));
-                    submitRef.current?.focus();
-                  }}
+                  disabled={busy}
+                  onClick={() => void demoSignIn(a)}
                 >
                   <span className="avatar" aria-hidden="true">{Array.from(a.name)[0]}</span>
                   <span className="demo-text">
@@ -111,6 +100,25 @@ export default function LoginPage() {
           <Status>{status}</Status>
         </section>
       )}
+
+      <h2 className="center muted small">{t('login.orManual')}</h2>
+      <form onSubmit={onSubmit} noValidate className="card">
+        <div className="field">
+          <label htmlFor="email">{t('login.email')}</label>
+          <input id="email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} aria-invalid={invalid} aria-describedby={error ? 'login-error' : undefined} />
+        </div>
+        <div className="field">
+          <label htmlFor="password">{t('login.password')}</label>
+          <input id="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} aria-invalid={invalid} aria-describedby={error ? 'login-error' : undefined} />
+        </div>
+        <div role="alert">
+          <ErrorText id="login-error">{error}</ErrorText>
+        </div>
+        <button ref={submitRef} type="submit" className="btn btn-primary btn-block" disabled={busy}>
+          {busy ? t('login.submitting') : t('login.submit')}
+        </button>
+      </form>
+
       <p className="center">
         <Link className="em-link" href="/emergency">
           <Icon name="siren" size="1.2em" />
