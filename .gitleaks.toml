@@ -38,7 +38,7 @@ paths = [
 ]
 
 # 4) Synthetic fixture passwords used ONLY inside test code (backend test helpers).
-#    Both conditions must hold: the literal matches AND the file is under a test directory.
+#    Exact synthetic value only (see note below).
 [[allowlists]]
 description = "Synthetic test-fixture passwords in test code only"
 # NOTE: a path+regex AND condition did not hold in gitleaks v8.28 (it allowlisted ANY secret under test/),
