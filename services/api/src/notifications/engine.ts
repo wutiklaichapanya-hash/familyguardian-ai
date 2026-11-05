@@ -167,8 +167,10 @@ export class NotificationEngine {
         await tx.insert(actionLogs).values({ userId: alert.seniorId, kind: 'alert_acknowledged', label: `Acknowledged by ${actor.displayName}` });
         await recordAudit(tx, { actorId: actor.userId, seniorId: alert.seniorId, action: 'alert.acknowledged', targetType: 'alert', targetId: alertId });
       }
+      // F-1: the acknowledging recipient's own deliveries become 'acknowledged' — including one still 'queued'
+      // (ack before the worker ran); the worker only acts on 'queued', so it will not flip it back to 'sent'.
       await tx.update(notifications).set({ state: 'acknowledged', acknowledgedAt: now, updatedAt: now })
-        .where(and(inArray(notifications.id, mine.map((m) => m.id)), inArray(notifications.state, ['sent', 'seen', 'failed'])));
+        .where(and(inArray(notifications.id, mine.map((m) => m.id)), inArray(notifications.state, ['queued', 'sent', 'seen', 'failed'])));
     });
   }
 

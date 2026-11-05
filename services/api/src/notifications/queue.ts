@@ -3,12 +3,15 @@ import { PgBoss } from 'pg-boss';
 
 export const JOB_DELIVER = 'notify-deliver';
 export const JOB_FOLLOWUP = 'help-followup';
-export type JobName = typeof JOB_DELIVER | typeof JOB_FOLLOWUP;
+export const JOB_PURGE = 'retention-purge';
+export type JobName = typeof JOB_DELIVER | typeof JOB_FOLLOWUP | typeof JOB_PURGE;
 export type JobHandler = (data: Record<string, unknown>) => Promise<void>;
 
 export interface JobQueue {
   send(name: JobName, data: Record<string, unknown>, delaySeconds?: number): Promise<void>;
   work(name: JobName, handler: JobHandler): Promise<void>;
+  /** Cron schedule (UTC). pg-boss keeps one schedule per queue name, so re-registering just updates it. */
+  schedule(name: JobName, cron: string): Promise<void>;
   stop(): Promise<void>;
 }
 
@@ -22,7 +25,7 @@ export class PgBossQueue implements JobQueue {
   private async ready() {
     this.started ??= (async () => {
       await this.boss.start();
-      for (const q of [JOB_DELIVER, JOB_FOLLOWUP]) await this.boss.createQueue(q, { retryLimit: 2, retryDelay: 5, retryBackoff: true });
+      for (const q of [JOB_DELIVER, JOB_FOLLOWUP, JOB_PURGE]) await this.boss.createQueue(q, { retryLimit: 2, retryDelay: 5, retryBackoff: true });
     })();
     await this.started;
   }
@@ -36,6 +39,10 @@ export class PgBossQueue implements JobQueue {
       for (const job of jobs) await handler(job.data);
     });
   }
+  async schedule(name: JobName, cron: string) {
+    await this.ready();
+    await this.boss.schedule(name, cron, {}, { tz: 'UTC' });
+  }
   async stop() {
     if (!this.started) return;
     await this.boss.stop({ graceful: true, timeout: 5000 });
@@ -46,6 +53,8 @@ export class PgBossQueue implements JobQueue {
 export class ManualQueue implements JobQueue {
   jobs: { name: JobName; data: Record<string, unknown>; delaySeconds: number }[] = [];
   private handlers = new Map<JobName, JobHandler>();
+  schedules = new Map<JobName, string>();
+  async schedule(name: JobName, cron: string) { this.schedules.set(name, cron); }
   async send(name: JobName, data: Record<string, unknown>, delaySeconds = 0) { this.jobs.push({ name, data, delaySeconds }); }
   async work(name: JobName, handler: JobHandler) { this.handlers.set(name, handler); }
   async stop() {}

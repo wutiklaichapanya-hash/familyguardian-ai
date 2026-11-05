@@ -8,6 +8,15 @@ export const userIdParam = z.object({ userId: z.uuid() });
 export const daysQuery = z.object({ days: z.coerce.number().int().min(1).max(90).default(30) });
 
 export const loginReq = z.object({ email: z.string().trim().toLowerCase().email().max(254), password: z.string().min(1).max(256) });
+export const registerReq = z.object({
+  email: z.string().trim().toLowerCase().email().max(254),
+  password: z.string().min(1).max(256),
+  displayName: z.string().trim().min(1).max(100),
+  role: z.enum(['senior', 'family']),
+  locale: z.enum(['th', 'en']).optional(),
+  politeParticle: z.enum(['ka', 'krap']).optional(),
+  phone: z.string().trim().regex(/^[0-9+\-\s()]{3,20}$/, 'invalid phone').optional(),
+});
 export const createCheckinReq = z.object({
   mood: z.enum(MOODS), note: z.string().trim().max(1000).optional(), noteShared: z.boolean().optional(), onlyMe: z.boolean().optional(),
 });

@@ -1,7 +1,7 @@
 // Database schema (Drizzle). Entities follow docs/architecture/03_ARCHITECTURE.md §5.
 // Migrations are generated with `pnpm --filter @fg/api db:generate` into ./drizzle and applied by src/db/migrate.ts.
 import {
-  boolean, index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid,
+  bigint, boolean, index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid,
 } from 'drizzle-orm/pg-core';
 import {
   ALERT_KINDS, MOODS, NOTIFICATION_CHANNELS, NOTIFICATION_STATES, RISK_LEVELS, ROLES, SHARE_CATEGORIES, ACTION_LOG_KINDS,
@@ -35,6 +35,8 @@ export const users = pgTable('users', {
   locale: text('locale').$type<'th' | 'en'>().notNull().default('th'),
   politeParticle: text('polite_particle').$type<'ka' | 'krap'>().notNull().default('ka'),
   isSynthetic: boolean('is_synthetic').notNull().default(false),
+  /** v0.3: senior's own phone (fictitious in demos). Shown to others ONLY with an active 'contacts' grant. */
+  phone: text('phone'),
   createdAt: ts('created_at').notNull().defaultNow(),
   deletedAt: ts('deleted_at'),
 }, (t) => [uniqueIndex('users_email_uq').on(t.email)]);
@@ -230,9 +232,16 @@ export const directoryEntries = pgTable('directory_entries', {
   sortOrder: integer('sort_order').notNull().default(0),
 }, (t) => [uniqueIndex('directory_country_phone_uq').on(t.country, t.phone)]);
 
-/** Append-only. Application code only INSERTs; a DB trigger rejects UPDATE/DELETE. */
+/**
+ * Append-only. Application code only INSERTs; a DB trigger rejects UPDATE/DELETE.
+ * v0.3 (SR-21 partial): a BEFORE INSERT trigger assigns `seq` and the hash chain
+ * (hash = sha256(prev_hash || canonical row)); never set these from code. Verify: `pnpm --filter @fg/api audit:verify`.
+ */
 export const auditEvents = pgTable('audit_events', {
   id: id(),
+  seq: bigint('seq', { mode: 'number' }),
+  prevHash: text('prev_hash'),
+  hash: text('hash'),
   at: ts('at').notNull().defaultNow(),
   actorId: uuid('actor_id'),
   seniorId: uuid('senior_id'),
@@ -240,7 +249,7 @@ export const auditEvents = pgTable('audit_events', {
   targetType: text('target_type'),
   targetId: text('target_id'),
   meta: jsonb('meta'),
-}, (t) => [index('audit_senior_idx').on(t.seniorId, t.at)]);
+}, (t) => [index('audit_senior_idx').on(t.seniorId, t.at), uniqueIndex('audit_seq_uq').on(t.seq)]);
 
 // ---- P1 billing (sandbox) ----
 /** Subscription per family (payer may be any member). Ids come from the provider (e.g. sbx_sub_...). */

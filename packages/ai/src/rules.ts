@@ -125,7 +125,7 @@ export const TEXT_RULES: TextRule[] = [
   },
   {
     id: 'manipulation_attempt',
-    signal: 'impersonation',
+    signal: 'manipulation_attempt',
     weight: 2,
     th: [
       rx('(?:ไม่ต้องสนใจ|ละเว้น|ละเลย)(?:กฎ|คำสั่ง|ระบบ)'),

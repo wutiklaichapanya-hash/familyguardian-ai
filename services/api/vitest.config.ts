@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitest/config';
+import { testDatabaseUrl } from './test/testDbUrl.ts';
 
-const base = process.env.DATABASE_URL ?? 'postgres://fg:fg_local_only@localhost:5433/familyguardian';
-const testUrl = (() => { const u = new URL(base); u.pathname = '/familyguardian_test'; return u.toString(); })();
+const testUrl = testDatabaseUrl();
 
 export default defineConfig({
   test: {

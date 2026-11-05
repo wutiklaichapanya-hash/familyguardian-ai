@@ -1,8 +1,11 @@
 // HTTP API contract between services/api and apps/web. Base path: /api/v1
-// Auth: httpOnly session cookie `fg_session`. Every mutating request MUST send header `x-fg-csrf: 1`
+// Auth: httpOnly session cookie `fg_session` (dev/test) or `__Host-fg_session` when NODE_ENV=production (SR-11, v0.3). Every mutating request MUST send header `x-fg-csrf: 1`
 // (custom-header CSRF defence; API CORS allows only WEB_ORIGIN with credentials).
 // Errors: { error: { code: string; message: string } } with proper HTTP status (400/401/403/404/409/429).
 // CONTRACT v0.2 (2026-11-05) — security review SR-01..SR-13 applied. Change only with lead approval.
+// CONTRACT v0.3 (2026-11-05) — ADDITIVE only: ScamSignal 'manipulation_attempt'; DELETE /me/checkins/:id (undo);
+//   optional seniorPhone on DashboardSeniorCard / AlertDTO ('contacts' grant only); UserDTO.phone (own profile);
+//   POST /auth/register (demo); documented error codes (API_ERROR_CODES) and the invite token format.
 //
 // GLOBAL RULES (v0.2):
 // - IDs are UUIDv4. A resource the caller may not see returns 404 (never 403-vs-404 differences
@@ -27,10 +30,26 @@ export type ISODate = string;
 // GET    /auth/me                                    -> MeRes
 // GET    /auth/sessions                              -> SessionDTO[]   (own signed-in devices)
 // DELETE /auth/sessions/:id                          -> 204
+// POST   /auth/register     body RegisterReq         -> 202 RegisterRes (v0.3, DEMO; rate-limited per IP; the SAME 202
+//        response whether or not the email already exists — no enumeration; does NOT sign in; weak password -> 400
+//        'weak_password'. Password reset is OUT OF SCOPE: there is no email provider.)
 // Sessions: idle timeout 12h (remember-device: 30d absolute), rotate token on login and step-up.
 export interface LoginReq { email: string; password: string }
+/** Password rule (v0.3): 12–256 chars, at least 3 of {lower, upper, digit, symbol} (or 16+ chars), not a common
+ *  password, and must not contain the email's local part. */
+export interface RegisterReq {
+  email: string; password: string; displayName: string; role: 'senior' | 'family';
+  locale?: Locale; politeParticle?: 'ka' | 'krap';
+  /** Senior only, optional. Fictitious numbers in demos. */
+  phone?: string;
+}
+export interface RegisterRes { status: 'accepted'; message: { th: string; en: string } }
 export interface SessionDTO { id: string; current: boolean; userAgent: string; createdAt: ISODate; lastSeenAt: ISODate }
-export interface UserDTO { id: string; email: string; displayName: string; role: Role; locale: Locale; politeParticle: 'ka' | 'krap' }
+export interface UserDTO {
+  id: string; email: string; displayName: string; role: Role; locale: Locale; politeParticle: 'ka' | 'krap';
+  /** v0.3: own profile phone (seniors). Only ever returned to the user themself. */
+  phone?: string | null;
+}
 export interface MeRes {
   user: UserDTO;
   /** For family/caregiver: the seniors whose circle they belong to. For senior: their own family id. */
@@ -40,8 +59,12 @@ export interface MeRes {
 // ---------- Check-ins (Module B) ----------
 // POST /me/checkins                      body CreateCheckinReq -> CheckinDTO   [senior]
 // GET  /me/checkins?days=30                                    -> CheckinDTO[] (own)
+// DELETE /me/checkins/:id                                      -> 204 [senior] (v0.3 undo) only within CHECKIN_UNDO_WINDOW_MINUTES
+//        of creation, else 409 'undo_window_passed'. Hard-deletes the row and its shares, writes an audit event (no content),
+//        cancels queued notifications about it. Unknown / not own -> 404.
 // GET  /seniors/:seniorId/checkins?days=30                     -> SharedCheckinDTO[] ('checkins' grant; onlyMe rows EXCLUDED IN SQL;
 //                                                                 note present only if noteShared; no onlyMe/noteShared flags) (SR-02)
+export const CHECKIN_UNDO_WINDOW_MINUTES = 10;
 export interface CreateCheckinReq { mood: Mood; note?: string; noteShared?: boolean; onlyMe?: boolean }
 export interface SharedCheckinDTO { id: string; mood: Mood; note?: string; createdAt: ISODate }
 export interface CheckinDTO { id: string; mood: Mood; note?: string | null; noteShared: boolean; onlyMe: boolean; createdAt: ISODate }
@@ -85,6 +108,9 @@ export interface AlertDTO {
   acknowledgedBy?: { userId: string; name: string; at: ISODate } | null;
   deliveries: DeliveryDTO[]; // senior sees all; recipient sees only own
   noRecipients?: boolean;
+  /** v0.3: the senior's phone, present ONLY when the viewer holds an active 'contacts' grant (read is access-logged).
+   *  Absent otherwise (also for the senior's own view). null = granted but no phone on file. */
+  seniorPhone?: string | null;
 }
 
 // ---------- Notifications ----------
@@ -145,6 +171,9 @@ export interface SharedGuardianPauseDTO {
 // ---------- Family Circle & consent (Module F) ----------
 // POST   /me/invitations body InviteReq -> InviteDTO  [senior] (returns invite LINK token ONCE: 128-bit random, stored hashed,
 //        single-use, 72h TTL. NO spoken code — reading codes aloud mimics OTP scams (SR-08/09).)
+//        Token format (v0.3 documented): `<inviteId>.<secret>` — inviteId = the invitation UUID, secret = 128-bit random,
+//        base64url. Only SHA-256(secret) is stored. inviteUrl = `${WEB_ORIGIN}/invite/accept#token=<token>` (fragment,
+//        never sent to servers); the page POSTs the token in the BODY to /invitations/accept. Treat it as opaque.
 // GET    /me/invitations                -> InviteDTO[] [senior] (no token)
 // DELETE /me/invitations/:id            -> 204         [senior] (cancel)
 // POST   /invitations/accept body AcceptInviteReq -> AcceptInviteRes (invitee signed in; token in BODY, never query/logs;
@@ -182,6 +211,8 @@ export interface DashboardSeniorCard {
   sharedScamChecks?: SharedScamCheckDTO[];
   sharedTransferPauses?: SharedGuardianPauseDTO[];
   lastUpdatedAt?: ISODate | null;
+  /** v0.3: present ONLY when the viewer holds an active 'contacts' grant; null = granted but no phone on file. */
+  seniorPhone?: string | null;
 }
 export interface DashboardDTO { seniors: DashboardSeniorCard[] }
 
@@ -205,3 +236,21 @@ export interface SubscriptionDTO { id: string; planId: PlanDTO['id']; status: 't
 // ---------- Engine result types (what @fg/ai returns; API adds ids/sharing) ----------
 export type ScamEngineResult = Omit<ScamAssessmentDTO, 'id' | 'sharedWith' | 'submittedText' | 'createdAt'>;
 export type GuardianPauseEngineResult = Pick<GuardianPauseDTO, 'level' | 'reasons'>;
+
+// ---------- Error codes (v0.3 documented) ----------
+// Every error body is { error: { code, message } }. `message` is for logs/developers; UIs map `code` to copy.
+export const API_ERROR_CODES = {
+  VALIDATION: 400, weak_password: 400, SHARE_NOT_ALLOWED: 400, INVITE_INVALID: 400, INVALID_GRANTEE: 400,
+  INVALID_EXPIRY: 400, NO_FAMILY: 400,
+  UNAUTHENTICATED: 401, INVALID_CREDENTIALS: 401,
+  /** Step-up password missing or wrong. The session stays valid; ask for the password again. */
+  step_up_failed: 401,
+  CSRF_REQUIRED: 403, SENIOR_ONLY: 403, ROLE_FORBIDDEN: 403, CAREGIVER_FORBIDDEN: 403, FORBIDDEN: 403,
+  /** Anything the caller may not see — including a member WITHOUT the grant (never 403, so nothing leaks). */
+  NOT_FOUND: 404,
+  GRANT_EXISTS: 409, INVALID_STATE: 409,
+  /** DELETE /me/checkins/:id after CHECKIN_UNDO_WINDOW_MINUTES. */
+  undo_window_passed: 409,
+  RATE_LIMITED: 429, INTERNAL: 500,
+} as const;
+export type ApiErrorCode = keyof typeof API_ERROR_CODES;

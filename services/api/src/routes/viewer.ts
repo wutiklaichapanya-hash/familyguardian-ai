@@ -75,7 +75,7 @@ export default async function viewerRoutes(app: FastifyInstance, ctx: Ctx) {
     const rows = await db.select().from(alerts).where(inArray(alerts.id, ids)).orderBy(desc(alerts.createdAt)).limit(100);
     const visible = [];
     for (const a of rows) if (await policy.canSeeAlert(actorOf(u), a)) visible.push(a);
-    return buildAlertDTOs(db, visible, u, false);
+    return buildAlertDTOs(db, visible, u, false, { policy, actor: actorOf(u) });
   });
 
   const loadVisibleAlert = async (u: ReturnType<typeof requireUser>, id: string) => {
@@ -90,7 +90,7 @@ export default async function viewerRoutes(app: FastifyInstance, ctx: Ctx) {
     const u = requireUser(req);
     const { id } = idParam.parse(req.params);
     const { a, asOwner } = await loadVisibleAlert(u, id);
-    return (await buildAlertDTOs(db, [a], u, asOwner))[0];
+    return (await buildAlertDTOs(db, [a], u, asOwner, { policy, actor: actorOf(u) }))[0];
   });
 
   app.post('/alerts/:id/ack', { schema: { tags: ['alerts'], summary: 'Acknowledge an alert (grant re-checked; else 404)' } }, async (req) => {
@@ -98,7 +98,7 @@ export default async function viewerRoutes(app: FastifyInstance, ctx: Ctx) {
     const { id } = idParam.parse(req.params);
     await engine.acknowledge(id, { userId: u.id, role: u.role, displayName: u.displayName });
     const [a] = await db.select().from(alerts).where(eq(alerts.id, id));
-    return (await buildAlertDTOs(db, [a!], u, false))[0];
+    return (await buildAlertDTOs(db, [a!], u, false, { policy, actor: actorOf(u) }))[0];
   });
 
   // ---- Notifications ----
@@ -170,7 +170,7 @@ export default async function viewerRoutes(app: FastifyInstance, ctx: Ctx) {
         const ids = mine.map((m) => m.alertId).filter((x): x is string => !!x);
         const pending = ids.length ? await db.select().from(alerts)
           .where(and(inArray(alerts.id, ids), eq(alerts.kind, 'user_requested_help'), isNull(alerts.acknowledgedAt))).orderBy(desc(alerts.createdAt)) : [];
-        card.pendingAlerts = await buildAlertDTOs(db, pending, u, false);
+        card.pendingAlerts = await buildAlertDTOs(db, pending, u, false, { policy, actor });
         assistance = pending.length > 0;
         for (const a of pending) times.push(a.createdAt.getTime());
       }
@@ -189,6 +189,12 @@ export default async function viewerRoutes(app: FastifyInstance, ctx: Ctx) {
         card.sharedTransferPauses = rows.map(toSharedPauseDTO);
         if (rows.some((r) => r.createdAt >= week && r.level === 'stop_and_verify')) verify = true;
         for (const r of rows) times.push(r.createdAt.getTime());
+      }
+
+      // v0.3: senior's phone ONLY with an active 'contacts' grant (policy 'read' → access-logged).
+      if (visible.includes('contacts') && (await policy.authorize(actor, 'read', c.seniorId, 'contacts')).allowed) {
+        const [sp] = await db.select({ phone: users.phone }).from(users).where(eq(users.id, c.seniorId));
+        card.seniorPhone = sp?.phone ?? null;
       }
 
       let status: DashboardStatus = 'not_shared';

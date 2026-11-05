@@ -8,7 +8,10 @@ import { sessions, users } from './db/schema';
 import type { AppConfig } from './config';
 import { HttpError } from './errors';
 
+/** Dev/test cookie name. In production the `__Host-` prefix is used (SR-11): Secure, Path=/, no Domain. */
 export const SESSION_COOKIE = 'fg_session';
+export const SESSION_COOKIE_PROD = '__Host-fg_session';
+export const sessionCookieName = (cfg: Pick<AppConfig, 'nodeEnv'>) => (cfg.nodeEnv === 'production' ? SESSION_COOKIE_PROD : SESSION_COOKIE);
 
 // Argon2id is the library default algorithm; parameters follow OWASP minimums (19 MiB, t=2).
 export const hashPassword = (pw: string) => hash(pw, { memoryCost: 19456, timeCost: 2, parallelism: 1 });
@@ -66,7 +69,8 @@ export async function listSessions(db: Db, userId: string) {
 }
 
 export function setSessionCookie(reply: FastifyReply, token: string, expiresAt: Date, cfg: Pick<AppConfig, 'nodeEnv'>) {
-  reply.setCookie(SESSION_COOKIE, token, { httpOnly: true, sameSite: 'lax', secure: cfg.nodeEnv === 'production', path: '/', expires: expiresAt });
+  // `__Host-` cookies must be Secure, Path=/ and carry no Domain attribute.
+  reply.setCookie(sessionCookieName(cfg), token, { httpOnly: true, sameSite: 'lax', secure: cfg.nodeEnv === 'production', path: '/', expires: expiresAt });
 }
 
 /**
@@ -78,7 +82,7 @@ export async function requireStepUp(db: Db, cfg: AppConfig, req: FastifyRequest,
   if (!u || !password || !(await verifyPassword(u.passwordHash, password))) {
     throw new HttpError(401, 'step_up_failed', 'Please re-enter your password to confirm');
   }
-  const old = req.cookies[SESSION_COOKIE];
+  const old = req.cookies[sessionCookieName(cfg)];
   const s = await createSession(db, u.id, cfg, String(req.headers['user-agent'] ?? ''));
   await destroySession(db, old);
   setSessionCookie(reply, s.token, s.expiresAt, cfg);
