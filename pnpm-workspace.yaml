@@ -4,3 +4,11 @@ packages:
   - packages/*
 allowBuilds:
   esbuild: true
+blockExoticSubdeps: true
+trustPolicy: no-downgrade
+# Wait 7 days before installing newly published versions (supply-chain hardening).
+minimumReleaseAge: 10080
+# Documented exception: postgres 4.0.0 (DB driver, major) was 6 days old when the policy was adopted on 2026-11-05.
+# Remove this exclusion after 2026-11-06 once 4.0.0 is older than 7 days.
+minimumReleaseAgeExclude:
+  - postgres@4.0.0
