@@ -10,3 +10,6 @@ playwright-report/
 *.log
 .DS_Store
 .claude/worktrees/
+
+# raw tool logs
+*_run.txt
