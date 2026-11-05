@@ -7,6 +7,7 @@ import { ApiError } from '@/lib/api';
 import { useI18n, type MessageKey } from '@/lib/i18n';
 import { homePathFor, useSession } from '@/lib/session';
 import type { Tone } from '@/lib/visual';
+import { Icon, type IconName } from './icons';
 
 /** Polite live region. Always rendered so screen readers pick up later changes. */
 export function Status({ children, className = '' }: { children?: ReactNode; className?: string }) {
@@ -21,7 +22,7 @@ export function ErrorText({ id, children }: { id?: string; children?: ReactNode 
   if (!children) return null;
   return (
     <p id={id} className="field-error">
-      <span aria-hidden="true">⚠ </span>
+      <Icon name="alert" size="1.1em" />
       {children}
     </p>
   );
@@ -94,10 +95,10 @@ export function useErrorMessage() {
   };
 }
 
-export function Chip({ tone = 'neutral', icon, children }: { tone?: Tone; icon?: string; children: ReactNode }) {
+export function Chip({ tone = 'neutral', icon, children }: { tone?: Tone; icon?: IconName; children: ReactNode }) {
   return (
     <span className={`chip chip-${tone}`}>
-      {icon && <span aria-hidden="true">{icon} </span>}
+      {icon && <Icon name={icon} size="1.05em" />}
       {children}
     </span>
   );
@@ -109,7 +110,7 @@ export function BackHome() {
   return (
     <p className="back-link">
       <Link href={me ? homePathFor(me.user.role) : '/'}>
-        <span aria-hidden="true">← </span>
+        <Icon name="chevronLeft" size="1.2em" />
         {t('nav.back')}
       </Link>
     </p>
@@ -211,7 +212,7 @@ export function TelLink({ phone, children, onCall, className = 'btn btn-secondar
   const href = `tel:${phone.replace(/[^\d+]/g, '')}`;
   return (
     <a href={href} className={className} onClick={onCall}>
-      <span aria-hidden="true">📞 </span>
+      <Icon name="phone" size="1.2em" />
       {children}
     </a>
   );

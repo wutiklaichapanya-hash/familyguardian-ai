@@ -1,5 +1,7 @@
 'use client';
 
+import { Icon } from '@/components/icons';
+import { HeroArt } from '@/components/Art';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useI18n } from '@/lib/i18n';
@@ -30,16 +32,28 @@ export default function WelcomePage() {
           )}
         </div>
       )}
-      <h1>{t('welcome.title')}</h1>
-      <p className="muted">{t('app.tagline')}</p>
+      <div className="hero">
+        <HeroArt />
+        <h1>{t('welcome.title')}</h1>
+        <p className="muted">{t('app.tagline')}</p>
+      </div>
       <section aria-labelledby="lang-h" className="card">
         <h2 id="lang-h">{t('welcome.chooseLang')}</h2>
         <LanguageToggle large />
       </section>
-      <ul className="stack" style={{ paddingInlineStart: '1.2em' }}>
-        <li>{t('welcome.promise1')}</li>
-        <li>{t('welcome.promise2')}</li>
-        <li>{t('welcome.promise3')}</li>
+      <ul className="promises">
+        <li>
+          <span className="ibadge fc-amber"><Icon name="sun" /></span>
+          <span>{t('welcome.promise1')}</span>
+        </li>
+        <li>
+          <span className="ibadge fc-blue"><Icon name="shieldSearch" /></span>
+          <span>{t('welcome.promise2')}</span>
+        </li>
+        <li>
+          <span className="ibadge fc-teal"><Icon name="lock" /></span>
+          <span>{t('welcome.promise3')}</span>
+        </li>
       </ul>
       <div className="stack">
         {me ? (
@@ -52,7 +66,7 @@ export default function WelcomePage() {
           </Link>
         )}
         <Link className="btn btn-danger btn-block" href="/emergency">
-          <span aria-hidden="true">🆘 </span>
+          <Icon name="siren" size="1.2em" />
           {t('home.tile.emergency')} — {t('home.tile.emergency.desc')}
         </Link>
       </div>

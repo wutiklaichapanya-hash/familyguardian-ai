@@ -13,11 +13,11 @@ import { Chip } from './ui';
 export function DeliveryList({ deliveries }: { deliveries: DeliveryDTO[] }) {
   const { t, locale } = useI18n();
   return (
-    <ul className="list-plain">
+    <ul className="list-plain timeline">
       {deliveries.map((d) => {
         const p = deliveryPresentation(d);
         return (
-          <li key={d.notificationId}>
+          <li key={d.notificationId} className={d.state === "acknowledged" || d.state === "seen" ? "" : "tl-wait"}>
             <div className="row">
               <span>{t(p.line, { name: d.recipientName })}</span>
               <Chip tone={p.tone} icon={p.icon}>{t(p.chip)}</Chip>

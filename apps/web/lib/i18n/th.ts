@@ -456,6 +456,20 @@ export const th = {
   'form.errorSummary': 'กรุณาแก้ไขช่องต่อไปนี้',
   'signout.failed': 'ยังยืนยันการออกจากระบบไม่ได้ เพราะเชื่อมต่อไม่ได้ เครื่องนี้อาจยังเข้าสู่ระบบอยู่',
   'signout.retry': 'ออกจากระบบอีกครั้ง',
+  // App-shell chrome (visual redesign): short tab labels, account menu, compact language pill.
+  'nav.account': 'บัญชีของฉัน',
+  'nav.signedInAs': 'เข้าสู่ระบบเป็น {name}',
+  'nav.tab.sharing': 'การแชร์',
+  'nav.tab.notifications': 'แจ้งเตือน',
+  'nav.tab.family': 'ครอบครัว',
+  'nav.tab.invite': 'คำเชิญ',
+  'lang.th.short': 'ไทย',
+  'lang.en.short': 'EN',
+  'app.brandSuffix': 'AI',
+  'app.brandTagline': 'Care Beyond Distance.',
+  'app.footerTagline': 'ดูแลด้วยใจ ไม่ควบคุม',
+  'home.moodQuick': 'แตะความรู้สึก แล้วบันทึกเช็กอินในหน้าถัดไป',
+  'family.ownerBanner': 'ผู้สูงอายุเป็นเจ้าของข้อมูล — ครอบครัวเห็นเฉพาะที่แชร์',
 } as const;
 
 export type MessageKey = keyof typeof th;

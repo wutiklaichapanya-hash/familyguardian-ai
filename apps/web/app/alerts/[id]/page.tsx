@@ -1,5 +1,6 @@
 'use client';
 
+import { Icon } from '@/components/icons';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -57,7 +58,7 @@ function AlertInner() {
     <>
       <p className="back-link">
         <Link href="/family">
-          <span aria-hidden="true">← </span>
+          <Icon name="chevronLeft" size="1.2em" />
           {t('nav.dashboard')}
         </Link>
       </p>
@@ -75,7 +76,7 @@ function AlertInner() {
               <dd>{formatDateTime(alert.createdAt, locale)}</dd>
               <dt>{t('alert.origin')}</dt>
               <dd>
-                <Chip tone="neutral" icon={alert.origin === 'user_requested' ? '🙋' : 'ⓘ'}>
+                <Chip tone="neutral" icon={alert.origin === 'user_requested' ? "handRaised" : "info"}>
                   {alert.origin === 'user_requested'
                     ? t('alert.origin.user_requested', { name: alert.seniorName })
                     : t('alert.origin.system_warning')}
@@ -126,7 +127,7 @@ function AlertInner() {
               seniorContact === null && <p className="muted">{t('alert.noPhone', { name: alert.seniorName })}</p>
             )}
             <a className="btn btn-secondary btn-block" href="tel:1669">
-              <span aria-hidden="true">📞 </span>
+              <Icon name="phone" size="1.2em" />
               {t('common.call1669')}
             </a>
           </div>

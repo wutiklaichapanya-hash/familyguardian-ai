@@ -1,6 +1,7 @@
 // Truthful presentation of help-request delivery (Codex UX P0 #2–#5, SR-12, SR-16). Pure, unit-tested.
 import type { AlertDTO, DeliveryDTO } from '@fg/shared';
 import type { MessageKey } from './i18n/th';
+import type { IconName } from '../components/icons';
 import { STATE_VISUAL, type Tone } from './visual';
 
 export interface DeliveryPresentation {
@@ -8,7 +9,7 @@ export interface DeliveryPresentation {
   line: MessageKey;
   chip: MessageKey;
   tone: Tone;
-  icon: string;
+  icon: IconName;
   /** True when nothing reached a real person (simulated adapter). */
   simulated: boolean;
 }
@@ -22,7 +23,7 @@ export interface DeliveryPresentation {
 export function deliveryPresentation(d: Pick<DeliveryDTO, 'channel' | 'state'>): DeliveryPresentation {
   const simulated = d.channel !== 'in_app';
   if (simulated && d.state !== 'acknowledged' && d.state !== 'cancelled_no_consent') {
-    return { line: 'state.simulated', chip: 'chip.simulated', tone: 'neutral', icon: '🧪', simulated: true };
+    return { line: 'state.simulated', chip: 'chip.simulated', tone: 'neutral', icon: 'flask', simulated: true };
   }
   const v = STATE_VISUAL[d.state];
   return { line: `state.${d.state}`, chip: `chip.${d.state}`, tone: v.tone, icon: v.icon, simulated };

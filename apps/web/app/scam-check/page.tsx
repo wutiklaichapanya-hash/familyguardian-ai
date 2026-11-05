@@ -1,5 +1,6 @@
 'use client';
 
+import { Icon, type IconName } from '@/components/icons';
 import Link from 'next/link';
 import { useRef, useState, type FormEvent } from 'react';
 import { RISK_LABELS, type ScamAssessmentDTO } from '@fg/shared';
@@ -9,6 +10,26 @@ import { useI18n } from '@/lib/i18n';
 import { RISK_VISUAL } from '@/lib/visual';
 import { SharePanel } from '@/components/SharePanel';
 import { AlertRegion, BackHome, Chip, RequireRole, Status, useErrorMessage } from '@/components/ui';
+
+// Decorative icon per evidence signal; the signal name is always shown as text beside it.
+const SIGNAL_ICON: Partial<Record<string, IconName>> = {
+  impersonation: 'user',
+  urgency: 'clock',
+  secrecy: 'lock',
+  credential_request: 'lock',
+  otp_request: 'lock',
+  suspicious_link: 'link',
+  lookalike_domain: 'link',
+  link_shortener: 'link',
+  advance_fee: 'banknote',
+  investment_promise: 'banknote',
+  payment_request: 'banknote',
+  prize_or_lottery: 'banknote',
+  remote_access_app: 'smartphone',
+  threat_or_fear: 'alert',
+  romance: 'heart',
+  unknown_number_pattern: 'phone',
+};
 
 function ScamInner() {
   const { t, l, locale } = useI18n();
@@ -57,7 +78,10 @@ function ScamInner() {
   return (
     <>
       <BackHome />
-      <h1>{t('scam.title')}</h1>
+      <div className="page-head">
+        <span className="ibadge fc-blue"><Icon name="shieldSearch" /></span>
+        <h1>{t('scam.title')}</h1>
+      </div>
       <p>{t('scam.intro')}</p>
       <p>
         <Link href="/guardian-pause">{t('scam.pauseLink')}</Link>
@@ -98,29 +122,32 @@ function ScamInner() {
       {result && (
         <>
           <section ref={resultRef} tabIndex={-1} aria-labelledby="result-h" className={`card result result-${result.risk}`}>
-            <h2 id="result-h">{t('scam.resultTitle')}</h2>
-            <p>
-              <Chip tone={RISK_VISUAL[result.risk].tone} icon={RISK_VISUAL[result.risk].icon}>
-                {l(RISK_LABELS[result.risk])}
-              </Chip>
-            </p>
-            <p>{l(result.explanation)}</p>
+            <div className="verdict">
+              <span className="verdict-icon">
+                <Icon name={RISK_VISUAL[result.risk].icon} />
+              </span>
+              <h2 id="result-h" className="verdict-eyebrow">{t('scam.resultTitle')}</h2>
+              <p className="verdict-title">{l(RISK_LABELS[result.risk])}</p>
+            </div>
+            <p className="verdict-body">{l(result.explanation)}</p>
 
             {/* Order: verdict → uncertainty → actions → evidence → full text (Codex UX P0 #8). */}
-            <h3>{t('scam.notSure')}</h3>
-            <p>{l(result.uncertainty)}</p>
+            <div className="verdict-unsure">
+              <h3>{t('scam.notSure')}</h3>
+              <p>{l(result.uncertainty)}</p>
+            </div>
           </section>
 
           <section aria-labelledby="scam-actions-h" className="card">
             <h2 id="scam-actions-h">{t('pause.actions')}</h2>
             <div className="stack">
               {/* Always available, whether or not anyone holds a sharing grant. */}
-              <Link className="btn btn-secondary btn-block" href="/contacts">
-                <span aria-hidden="true">📞 </span>
+              <Link className="btn btn-primary btn-block" href="/contacts">
+                <Icon name="phone" size="1.2em" />
                 {t('pause.callFamily')}
               </Link>
               <a className={result.risk === 'high_risk' ? 'btn btn-danger btn-block' : 'btn btn-secondary btn-block'} href="tel:1441">
-                <span aria-hidden="true">📞 </span>
+                <Icon name="phone" size="1.2em" />
                 {t('common.call1441')}
               </a>
             </div>
@@ -142,10 +169,11 @@ function ScamInner() {
             {result.evidence.length === 0 ? (
               <p>{t('scam.noEvidence')}</p>
             ) : (
-              <ul>
+              <ul className="evidence">
                 {result.evidence.map((ev, i) => (
                   <li key={`${ev.signal}-${i}`}>
-                    <strong>{t(`signal.${ev.signal}`)}</strong>
+                    <span className="ev-icon"><Icon name={SIGNAL_ICON[ev.signal] ?? 'alert'} /></span>
+                    <strong className="ev-title">{t(`signal.${ev.signal}`)}</strong>
                     {ev.quote && (
                       <>
                         {/* Untrusted text: labelled as coming from the message, defanged, never a link or tel:. */}
@@ -165,7 +193,7 @@ function ScamInner() {
             )}
 
             <h3>{t('scam.steps')}</h3>
-            <ol>
+            <ol className="steps">
               {result.verificationSteps.map((s, i) => (
                 <li key={i}>{l(s)}</li>
               ))}

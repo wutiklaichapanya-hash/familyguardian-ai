@@ -1,5 +1,6 @@
 'use client';
 
+import { Icon } from '@/components/icons';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import type { NotificationDTO } from '@fg/shared';
@@ -46,7 +47,10 @@ function NotificationsInner() {
 
   return (
     <>
-      <h1>{t('notif.title')}</h1>
+      <div className="page-head">
+        <span className="ibadge fc-blue"><Icon name="bell" /></span>
+        <h1>{t('notif.title')}</h1>
+      </div>
       <LoadError message={error} onRetry={load} />
       <Status>{status}</Status>
       <AlertRegion>{actionError}</AlertRegion>
@@ -60,7 +64,7 @@ function NotificationsInner() {
               <li key={n.id} className="card">
                 <div className="row">
                   <Chip tone={v.tone} icon={v.icon}>{t(`chip.${n.state}`)}</Chip>
-                  {n.simulated && <Chip tone="neutral" icon="🧪">{t('notif.simulated')}</Chip>}
+                  {n.simulated && <Chip tone="neutral" icon="flask">{t('notif.simulated')}</Chip>}
                 </div>
                 {n.contentUnavailable ? (
                   <p className="muted">{t('notif.unavailable')}</p>

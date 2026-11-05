@@ -1,5 +1,6 @@
 'use client';
 
+import { Icon } from '@/components/icons';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import type { ContactDTO } from '@fg/shared';
 import { api } from '@/lib/api';
@@ -88,7 +89,10 @@ function ContactsInner() {
   return (
     <>
       <BackHome />
-      <h1>{t('contacts.title')}</h1>
+      <div className="page-head">
+        <span className="ibadge fc-green"><Icon name="phone" /></span>
+        <h1>{t('contacts.title')}</h1>
+      </div>
       <p className="muted">{t('contacts.hint')}</p>
       <Status className="notice">{status && (
         <>

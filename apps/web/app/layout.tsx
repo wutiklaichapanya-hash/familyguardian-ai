@@ -1,15 +1,22 @@
 import type { Metadata, Viewport } from 'next';
-import { Noto_Sans_Thai } from 'next/font/google';
+import { Prompt, Sarabun } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { Providers } from '@/components/Providers';
 import './globals.css';
 
 // Self-hosted at build time by next/font. CSS falls back to the system Thai stack if unavailable.
-const notoThai = Noto_Sans_Thai({
+// Prompt: headings, buttons and navigation. Sarabun: body text (looped Thai, highly legible for older readers).
+const prompt = Prompt({
   subsets: ['thai', 'latin'],
-  weight: ['400', '600', '700'],
+  weight: ['500', '600', '700'],
   display: 'swap',
-  variable: '--font-thai',
+  variable: '--font-head',
+});
+const sarabun = Sarabun({
+  subsets: ['thai', 'latin'],
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+  variable: '--font-body',
 });
 
 export const metadata: Metadata = {
@@ -27,14 +34,14 @@ export const viewport: Viewport = {
   initialScale: 1,
   // No maximum-scale: people must be able to zoom (WCAG 1.4.4).
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#2F6F6A' },
+    { media: '(prefers-color-scheme: light)', color: '#FBF8F3' },
     { media: '(prefers-color-scheme: dark)', color: '#121816' },
   ],
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="th" className={notoThai.variable} data-audience="senior">
+    <html lang="th" className={`${prompt.variable} ${sarabun.variable}`} data-audience="senior">
       <body>
         <Providers>{children}</Providers>
       </body>

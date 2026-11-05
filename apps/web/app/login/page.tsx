@@ -1,5 +1,7 @@
 'use client';
 
+import { Icon } from '@/components/icons';
+import { HeroArt } from '@/components/Art';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRef, useState, type FormEvent } from 'react';
@@ -54,7 +56,10 @@ export default function LoginPage() {
   const invalid = error ? true : undefined;
   return (
     <>
-      <h1>{t('login.title')}</h1>
+      <div className="hero hero-compact">
+        <HeroArt />
+        <h1>{t('login.title')}</h1>
+      </div>
       <form onSubmit={onSubmit} noValidate className="card">
         <div className="field">
           <label htmlFor="email">{t('login.email')}</label>
@@ -76,12 +81,12 @@ export default function LoginPage() {
         <section aria-labelledby="demo-h" className="card">
           <h2 id="demo-h">{t('login.demoTitle')}</h2>
           <p className="muted small">{t('login.demoHint')}</p>
-          <ul className="list-plain">
+          <ul className="demo-list">
             {DEMO_ACCOUNTS.map((a) => (
               <li key={a.email}>
                 <button
                   type="button"
-                  className="btn btn-secondary btn-block"
+                  className="demo-card"
                   onClick={() => {
                     setEmail(a.email);
                     setPassword(a.password);
@@ -90,7 +95,15 @@ export default function LoginPage() {
                     submitRef.current?.focus();
                   }}
                 >
-                  {a.name} — {t(a.role)}
+                  <span className="avatar" aria-hidden="true">{Array.from(a.name)[0]}</span>
+                  <span className="demo-text">
+                    <span className="demo-name">{a.name}</span>
+                    <span className="demo-role">
+                      <span className="visually-hidden"> — </span>
+                      {t(a.role)}
+                    </span>
+                  </span>
+                  <Icon name="chevronRight" />
                 </button>
               </li>
             ))}
@@ -98,9 +111,9 @@ export default function LoginPage() {
           <Status>{status}</Status>
         </section>
       )}
-      <p>
-        <Link href="/emergency">
-          <span aria-hidden="true">🆘 </span>
+      <p className="center">
+        <Link className="em-link" href="/emergency">
+          <Icon name="siren" size="1.2em" />
           {t('home.tile.emergency')} — {t('home.tile.emergency.desc')}
         </Link>
       </p>

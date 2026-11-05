@@ -456,4 +456,18 @@ export const en: Record<MessageKey, string> = {
   'form.errorSummary': 'Please fix the following',
   'signout.failed': 'Sign-out could not be confirmed because the app could not connect. This device may still be signed in.',
   'signout.retry': 'Sign out again',
+  // App-shell chrome (visual redesign).
+  'nav.account': 'My account',
+  'nav.signedInAs': 'Signed in as {name}',
+  'nav.tab.sharing': 'Sharing',
+  'nav.tab.notifications': 'Notices',
+  'nav.tab.family': 'Family',
+  'nav.tab.invite': 'Invites',
+  'lang.th.short': 'ไทย',
+  'lang.en.short': 'EN',
+  'app.brandSuffix': 'AI',
+  'app.brandTagline': 'Care Beyond Distance.',
+  'app.footerTagline': 'Care with heart, not control',
+  'home.moodQuick': 'Tap a feeling, then save your check-in on the next page',
+  'family.ownerBanner': 'The older adult owns the data — family sees only what is shared',
 };

@@ -1,5 +1,6 @@
 'use client';
 
+import { Icon } from '@/components/icons';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import {
   CAREGIVER_FORBIDDEN, SHARE_CATEGORIES,
@@ -188,7 +189,10 @@ function PrivacyInner() {
   return (
     <>
       <BackHome />
-      <h1>{t('privacy.title')}</h1>
+      <div className="page-head">
+        <span className="ibadge fc-teal"><Icon name="share" /></span>
+        <h1>{t('privacy.title')}</h1>
+      </div>
       <p>{t('privacy.intro')}</p>
       <p className="notice">{t('privacy.review')}</p>
       <p className="muted small">{t('coercion.note')}</p>
@@ -261,7 +265,7 @@ function PrivacyInner() {
                         // Unknown is never shown as "not shared".
                         <span className="muted small">{loadErrors.grants ? t('privacy.sectionFailed') : t('common.loading')}</span>
                       ) : g ? (
-                        <Chip tone="brand" icon="👁">{t('privacy.sharedUntil', { date: formatLongDate(g.expiresAt, locale) })}</Chip>
+                        <Chip tone="brand" icon="eye">{t('privacy.sharedUntil', { date: formatLongDate(g.expiresAt, locale) })}</Chip>
                       ) : (
                         <span className="muted small">{t('privacy.notShared')}</span>
                       )}

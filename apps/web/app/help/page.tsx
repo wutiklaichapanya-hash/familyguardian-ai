@@ -1,5 +1,6 @@
 'use client';
 
+import { Icon } from '@/components/icons';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AlertDTO } from '@fg/shared';
@@ -98,7 +99,10 @@ function HelpInner() {
   return (
     <>
       <BackHome />
-      <h1>{t('help.title')}</h1>
+      <div className="page-head">
+        <span className="ibadge fc-purple"><Icon name="handRaised" /></span>
+        <h1>{t('help.title')}</h1>
+      </div>
       <p>{t('help.intro')}</p>
       <div className="card">
         <section aria-labelledby="help-recipients-h">
@@ -137,7 +141,7 @@ function HelpInner() {
         </div>
         <AlertRegion>{error}</AlertRegion>
         <button type="button" className="btn btn-primary btn-block" onClick={send} disabled={busy}>
-          <span aria-hidden="true">🙋 </span>
+          <Icon name="handRaised" size="1.2em" />
           {busy ? t('help.sending') : t('help.send')}
         </button>
         <p className="muted small">{t('help.notAgency')}</p>
@@ -204,11 +208,11 @@ function HelpInner() {
         <h2 id="help-alt-h">{t('help.alternativesTitle')}</h2>
         <div className="stack">
           <Link className="btn btn-secondary btn-block" href="/contacts">
-            <span aria-hidden="true">📞 </span>
+            <Icon name="phone" size="1.2em" />
             {t('checkin.footerContacts')}
           </Link>
           <a className="btn btn-danger btn-block" href="tel:1669">
-            <span aria-hidden="true">📞 </span>
+            <Icon name="phone" size="1.2em" />
             {t('common.call1669')}
           </a>
           <Link className="btn btn-secondary btn-block" href="/emergency">

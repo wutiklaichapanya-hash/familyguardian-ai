@@ -1,5 +1,6 @@
 'use client';
 
+import { Icon } from '@/components/icons';
 import Link from 'next/link';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { DirectoryEntryDTO, GuardianPauseAnswers, GuardianPauseDTO } from '@fg/shared';
@@ -84,10 +85,13 @@ function PauseInner() {
   return (
     <>
       <BackHome />
-      <h1>{t('pause.title')}</h1>
+      <div className="page-head">
+        <span className="ibadge fc-orange"><Icon name="pauseHand" /></span>
+        <h1>{t('pause.title')}</h1>
+      </div>
       <p className="notice notice-warm">
         <strong>
-          <span aria-hidden="true">ⓘ </span>
+          <Icon name="info" size="1.1em" />
           {t('pause.note')}
         </strong>
       </p>
@@ -100,8 +104,9 @@ function PauseInner() {
             <input id="amount" type="text" inputMode="decimal" autoComplete="off" value={amount} onChange={(e) => setAmount(e.target.value)} aria-invalid={!!errors.amount || undefined} aria-describedby={errors.amount ? 'amount-err' : undefined} />
             <ErrorText id="amount-err">{errors.amount}</ErrorText>
           </div>
+          <div className="q-steps">
           {QUESTIONS.map((q) => (
-            <fieldset key={q.key} aria-describedby={errors[q.key] ? `${q.key}-err` : undefined}>
+            <fieldset key={q.key} className="q-card" aria-describedby={errors[q.key] ? `${q.key}-err` : undefined}>
               <legend>{t(q.label)}</legend>
               <div className="yesno">
                 {[true, false].map((v) => (
@@ -123,6 +128,7 @@ function PauseInner() {
               <ErrorText id={`${q.key}-err`}>{errors[q.key]}</ErrorText>
             </fieldset>
           ))}
+          </div>
           <div className="field">
             <label htmlFor="pnote">
               {t('pause.recipientNote')} <span className="muted">{t('common.optional')}</span>
@@ -142,12 +148,16 @@ function PauseInner() {
             ref={resultRef}
             tabIndex={-1}
             aria-labelledby="pause-result-h"
-            className={`card result ${stop ? 'result-stop notice-alert' : 'result-care'}`}
+            className={`card result ${stop ? 'result-stop' : 'result-care'}`}
           >
-            <h2 id="pause-result-h">
-              <span aria-hidden="true">{stop ? '✋ ' : '⚠️ '}</span>
-              {stop ? t('pause.stopTitle') : t('pause.careTitle')}
-            </h2>
+            <div className="verdict">
+              <span className="verdict-icon">
+                <Icon name={stop ? 'pauseHand' : 'alert'} />
+              </span>
+              <h2 id="pause-result-h" className="verdict-title">
+                {stop ? t('pause.stopTitle') : t('pause.careTitle')}
+              </h2>
+            </div>
             <p>{stop ? t('pause.stopBody') : t('pause.careBody')}</p>
             <p className="muted">{t('pause.amountShown', { amount: formatNumber(result.amountThb, locale) })}</p>
             {result.reasons.length > 0 && (
@@ -168,14 +178,14 @@ function PauseInner() {
               {/* Verification steps are shown immediately, not behind a toggle. */}
               <div>
                 <h3>{t('pause.stopVerify')}</h3>
-                <ol>
+                <ol className="steps">
                   <li>{t('pause.step1')}</li>
                   <li>{t('pause.step2')}</li>
                   <li>{t('pause.step3')}</li>
                 </ol>
               </div>
-              <Link className="btn btn-secondary btn-block" href="/contacts">
-                <span aria-hidden="true">📞 </span>
+              <Link className="btn btn-primary btn-block" href="/contacts">
+                <Icon name="phone" size="1.2em" />
                 {t('pause.callFamily')}
               </Link>
               <div>
@@ -189,7 +199,7 @@ function PauseInner() {
                 ))}
               </div>
               <a className={stop ? 'btn btn-danger btn-block' : 'btn btn-secondary btn-block'} href="tel:1441">
-                <span aria-hidden="true">📞 </span>
+                <Icon name="phone" size="1.2em" />
                 {t('common.call1441')}
               </a>
             </div>

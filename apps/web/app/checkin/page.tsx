@@ -1,5 +1,6 @@
 'use client';
 
+import { Icon } from '@/components/icons';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { MOOD_LABELS, MOODS, type CheckinDTO, type Mood } from '@fg/shared';
@@ -43,6 +44,12 @@ function CheckinInner() {
   useEffect(() => {
     loadRecipients();
   }, [loadRecipients]);
+
+  // A feeling tapped on Home arrives as ?mood=…: pre-select it (nothing is saved until Save is pressed).
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get('mood');
+    if (q && (MOODS as readonly string[]).includes(q)) setMood(q as Mood);
+  }, []);
 
   const availability = shareAvailability(recipients);
   // If lookup fails or nobody holds access, the sharing option is unavailable; fall back to private.
@@ -106,13 +113,16 @@ function CheckinInner() {
   return (
     <>
       <BackHome />
-      <h1>{t('checkin.title')}</h1>
+      <div className="page-head">
+        <span className="ibadge fc-amber"><Icon name="sun" /></span>
+        <h1>{t('checkin.title')}</h1>
+      </div>
 
       {saved ? (
         <div ref={confirmRef} tabIndex={-1} className="card notice" role="status" aria-live="polite">
           <p>
             <strong>
-              <span aria-hidden="true">{MOOD_ICON[saved.mood]} </span>
+              <Icon name={MOOD_ICON[saved.mood]} size="1.25em" />
               {t('checkin.saved')}
             </strong>
           </p>
@@ -136,7 +146,7 @@ function CheckinInner() {
             <legend>{t('checkin.moodLegend')}</legend>
             <div className="moods">
               {MOODS.map((m) => (
-                <label key={m} className="mood" htmlFor={`mood-${m}`}>
+                <label key={m} className={`mood mf-${m}`} htmlFor={`mood-${m}`}>
                   <input
                     id={`mood-${m}`}
                     type="radio"
@@ -148,7 +158,7 @@ function CheckinInner() {
                       setMoodError('');
                     }}
                   />
-                  <span className="mood-icon" aria-hidden="true">{MOOD_ICON[m]}</span>
+                  <span className="mood-face"><Icon name={MOOD_ICON[m]} /></span>
                   <span>{l(MOOD_LABELS[m])}</span>
                 </label>
               ))}
@@ -243,7 +253,7 @@ function CheckinInner() {
         <p>{t('checkin.footer')}</p>
         <div className="btn-row">
           <a className="btn btn-secondary" href="tel:1669">
-            <span aria-hidden="true">📞 </span>
+            <Icon name="phone" size="1.2em" />
             {t('checkin.footerCall')}
           </a>
           <Link className="btn btn-secondary" href="/contacts">
@@ -265,7 +275,7 @@ function CheckinInner() {
                 <span>
                   {d.mood ? (
                     <>
-                      <span aria-hidden="true">{MOOD_ICON[d.mood]} </span>
+                      <Icon name={MOOD_ICON[d.mood]} size="1.25em" />
                       {l(MOOD_LABELS[d.mood])}
                       {d.onlyMe && <span className="muted small"> · {t('checkin.onlyMeTag')}</span>}
                     </>

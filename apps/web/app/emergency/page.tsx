@@ -1,5 +1,6 @@
 'use client';
 
+import { Icon, type IconName } from '@/components/icons';
 import { useEffect, useState } from 'react';
 import type { DirectoryEntryDTO } from '@fg/shared';
 import { api } from '@/lib/api';
@@ -10,6 +11,15 @@ import { useSession } from '@/lib/session';
 import { BackHome, Chip, Status, TelLink } from '@/components/ui';
 
 const ORDER: DirectoryEntryDTO['kind'][] = ['medical_emergency', 'police', 'anti_scam', 'social_support', 'bank_fraud'];
+
+// Decorative badge per service kind (the name and number are always shown as text).
+const KIND_VISUAL: Record<DirectoryEntryDTO['kind'], { icon: IconName; fc: string }> = {
+  medical_emergency: { icon: 'heart', fc: 'red' },
+  police: { icon: 'shield', fc: 'blue' },
+  anti_scam: { icon: 'shieldSearch', fc: 'orange' },
+  social_support: { icon: 'users', fc: 'teal' },
+  bank_fraud: { icon: 'banknote', fc: 'purple' },
+};
 
 // Public page: must work without sign-in and without the API (static fallback).
 export default function EmergencyPage() {
@@ -44,22 +54,32 @@ export default function EmergencyPage() {
   return (
     <>
       <BackHome />
-      <h1>
-        <span aria-hidden="true">🆘 </span>
-        {t('emergency.title')}
-      </h1>
+      <div className="em-hero">
+        <span className="ibadge ibadge-lg fc-red">
+          <Icon name="siren" />
+        </span>
+        <h1>{t('emergency.title')}</h1>
+      </div>
       <p className="notice notice-alert">
         <strong>{t('emergency.notAuto')}</strong>
       </p>
       {offline && <p className="muted small">{t('emergency.offline')}</p>}
-      <ul className="list-plain">
+      <ul className="em-list">
         {sorted.map((e) => (
-          <li key={e.id} className="card">
-            <h2>{l(e.name)}</h2>
-            <p>{l(e.purpose)}</p>
+          <li key={e.id} className={`card${e.kind === 'medical_emergency' ? ' em-medical-card' : ''}`}>
+            <div className="em-head">
+              <span className={`ibadge fc-${KIND_VISUAL[e.kind].fc}`}>
+                <Icon name={KIND_VISUAL[e.kind].icon} />
+              </span>
+              <div>
+                <h2>{l(e.name)}</h2>
+                <p>{l(e.purpose)}</p>
+              </div>
+            </div>
+            <p className="em-number" aria-hidden="true">{e.phone}</p>
             <p>
               {e.verification === 'needs_human_verification' ? (
-                <Chip tone="neutral" icon="⏳">{t('emergency.unverified')}</Chip>
+                <Chip tone="neutral" icon="clock">{t('emergency.unverified')}</Chip>
               ) : (
                 e.verifiedAt && <span className="muted small">{t('emergency.verifiedOn', { date: formatLongDate(e.verifiedAt, locale) })}</span>
               )}
