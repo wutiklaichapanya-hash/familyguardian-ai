@@ -28,7 +28,8 @@
     "tests": "docker build OK; gitleaks clean; restore rehearsal OK (schema only); API host bug sent to backend"
   },
   "codex-ux": {
-    "status": "running"
+    "status": "reported",
+    "tests": "n/a \u2014 read-only review: 12 P0 fixes queued for frontend after QA run"
   },
   "web": {
     "status": "reported",
