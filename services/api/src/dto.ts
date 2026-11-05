@@ -16,6 +16,7 @@ const isoN = (d: Date | null | undefined) => (d ? d.toISOString() : null);
 
 export const toUserDTO = (u: Row<typeof users>): UserDTO => ({
   id: u.id, email: u.email, displayName: u.displayName, role: u.role, locale: u.locale, politeParticle: u.politeParticle,
+  phone: u.phone ?? null, // own profile only (meRes)
 });
 
 /** Senior's own view. */

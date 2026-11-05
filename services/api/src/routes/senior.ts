@@ -2,14 +2,15 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { and, desc, eq, gte, inArray } from 'drizzle-orm';
 import { assessScam, evaluateGuardianPause } from '@fg/ai';
-import type { GuardianPauseEngineResult, ScamEngineResult, ShareCategory } from '@fg/shared';
+import { CHECKIN_UNDO_WINDOW_MINUTES, type GuardianPauseEngineResult, type ScamEngineResult, type ShareCategory } from '@fg/shared';
 import { type Ctx, actorOf, requireRole } from '../app';
 import { requireOwner } from '../circles';
 import {
-  actionLogs, alerts, contentShares, directoryEntries, guardianPauseSessions, scamAssessments, trustedContacts, wellbeingCheckins,
+  actionLogs, alerts, contentShares, directoryEntries, guardianPauseSessions, notifications, scamAssessments, trustedContacts, wellbeingCheckins,
 } from '../db/schema';
 import { recordAudit } from '../audit';
-import { notFound } from '../errors';
+import { sessionCookieName } from '../auth';
+import { conflict, notFound } from '../errors';
 import { toActionLogDTO, toCheckinDTO, toContactDTO, toPauseDTO, toScamDTO } from '../dto';
 import { buildAlertDTOs } from '../alertsView';
 import {
@@ -34,7 +35,7 @@ export default async function seniorRoutes(app: FastifyInstance, ctx: Ctx) {
     for (const r of rows) m.set(r.itemId, [...(m.get(r.itemId) ?? []), r.userId]);
     return m;
   };
-  const limit = (max: number) => ({ rateLimit: { max, timeWindow: '1 minute', keyGenerator: (req: FastifyRequest) => `u|${req.cookies.fg_session ?? req.ip}` } });
+  const limit = (max: number) => ({ rateLimit: { max, timeWindow: '1 minute', keyGenerator: (req: FastifyRequest) => `u|${req.cookies[sessionCookieName(config)] ?? req.ip}` } });
 
   // ---- Check-ins ----
   app.post('/me/checkins', { schema: { tags: ['checkins'], summary: 'Create a check-in (senior)', body: doc(createCheckinReq) } }, async (req) => {
@@ -46,6 +47,35 @@ export default async function seniorRoutes(app: FastifyInstance, ctx: Ctx) {
       noteShared: onlyMe ? false : (b.noteShared ?? false), onlyMe,
     }).returning();
     return toCheckinDTO(row!);
+  });
+
+  // v0.3 undo: hard delete within CHECKIN_UNDO_WINDOW_MINUTES of creation; afterwards 409 'undo_window_passed'.
+  app.delete('/me/checkins/:id', { schema: { tags: ['checkins'], summary: `Undo a check-in (senior; within ${CHECKIN_UNDO_WINDOW_MINUTES} minutes)` } }, async (req, reply) => {
+    const u = await senior(req, 'checkins');
+    const { id } = idParam.parse(req.params);
+    const [row] = await db.select({ id: wellbeingCheckins.id, createdAt: wellbeingCheckins.createdAt }).from(wellbeingCheckins)
+      .where(and(eq(wellbeingCheckins.id, id), eq(wellbeingCheckins.seniorId, u.id)));
+    if (!row) throw notFound('Check-in not found');
+    if (Date.now() - row.createdAt.getTime() > CHECKIN_UNDO_WINDOW_MINUTES * 60_000) {
+      throw conflict('undo_window_passed', `A check-in can only be undone within ${CHECKIN_UNDO_WINDOW_MINUTES} minutes`);
+    }
+    const cancelled = await db.transaction(async (tx) => {
+      await tx.delete(contentShares).where(and(eq(contentShares.category, 'checkins'), eq(contentShares.itemId, id)));
+      // Notifications about this check-in: queued ones are cancelled; delivered ones show the generic "unavailable" copy.
+      const src = await tx.select({ id: alerts.id }).from(alerts).where(and(eq(alerts.seniorId, u.id), eq(alerts.sourceId, id)));
+      let n = 0;
+      if (src.length) {
+        const alertIds = src.map((a) => a.id);
+        n = (await tx.update(notifications).set({ state: 'cancelled_no_consent', contentRevoked: true, updatedAt: new Date() })
+          .where(and(inArray(notifications.alertId, alertIds), eq(notifications.state, 'queued'))).returning({ id: notifications.id })).length;
+        await tx.update(notifications).set({ contentRevoked: true, updatedAt: new Date() }).where(inArray(notifications.alertId, alertIds));
+      }
+      await tx.delete(wellbeingCheckins).where(eq(wellbeingCheckins.id, id));
+      await recordAudit(tx, { actorId: u.id, seniorId: u.id, action: 'checkin.undone', targetType: 'checkin', targetId: id, meta: { cancelledNotifications: n } });
+      return n;
+    });
+    req.log.info({ checkinId: id, cancelled }, 'check-in undone');
+    return reply.status(204).send();
   });
 
   app.get('/me/checkins', { schema: { tags: ['checkins'], summary: 'My check-ins' } }, async (req) => {

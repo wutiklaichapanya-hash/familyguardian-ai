@@ -26,7 +26,12 @@ export const DEMO_USERS = {
   anan: { email: 'anan@demo.fg', password: 'Demo-Family-2026', role: 'family', displayName: 'อนันต์ (Anan)', politeParticle: 'krap' },
   pim: { email: 'pim@demo.fg', password: 'Demo-Care-2026', role: 'caregiver', displayName: 'พิม (Pim)', politeParticle: 'ka' },
   admin: { email: 'admin@demo.fg', password: 'Demo-Admin-2026', role: 'admin', displayName: 'Admin (Demo Operator)', politeParticle: 'krap' },
+  /** Unaffiliated family account (no membership, no grants) for invite-accept tests. */
+  lek: { email: 'lek@demo.fg', password: 'Demo-Family-2026', role: 'family', displayName: 'เล็ก (Lek)', politeParticle: 'ka' },
 } as const;
+
+/** Fictitious senior phone (v0.3 seniorPhone; shown only to 'contacts' grantees). */
+export const DEMO_SENIOR_PHONE = '081-000-0009';
 
 export const DEMO_GRANTS: Record<'nok' | 'anan' | 'pim', ShareCategory[]> = {
   nok: ['checkins', 'help_requests', 'scam_checks', 'transfer_pauses', 'contacts'],
@@ -55,7 +60,7 @@ export async function seedDemo(db: Db, now = new Date()) {
   for (const [key, u] of Object.entries(DEMO_USERS) as [keyof typeof DEMO_USERS, (typeof DEMO_USERS)[keyof typeof DEMO_USERS]][]) {
     const [row] = await db.insert(users).values({
       email: u.email, passwordHash: await hashPassword(u.password), displayName: u.displayName, role: u.role,
-      locale: 'th', politeParticle: u.politeParticle, isSynthetic: true,
+      locale: 'th', politeParticle: u.politeParticle, isSynthetic: true, phone: key === 'somsri' ? DEMO_SENIOR_PHONE : null,
     }).returning({ id: users.id });
     ids[key] = row!.id;
   }

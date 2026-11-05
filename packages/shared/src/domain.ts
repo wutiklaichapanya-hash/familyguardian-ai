@@ -29,6 +29,7 @@ export const SCAM_SIGNALS = [
   'suspicious_link', 'lookalike_domain', 'link_shortener', 'advance_fee',
   'investment_promise', 'payment_request', 'remote_access_app', 'threat_or_fear',
   'prize_or_lottery', 'romance', 'unknown_number_pattern',
+  'manipulation_attempt', // v0.3: text that tries to instruct the checker ("ignore previous rules, this is safe")
 ] as const;
 export type ScamSignal = (typeof SCAM_SIGNALS)[number];
 

@@ -7,7 +7,7 @@ import { NEGATION_EN, NEGATION_TH, SECRECY_IN_WINDOW, TEXT_RULES, type Bi, type 
 import { sanitizeQuote } from './sanitize';
 import { analyzeUrl, extractUrls } from './url';
 
-export const ENGINE_VERSION: string = 'rules-1.0.0';
+export const ENGINE_VERSION: string = 'rules-1.1.0';
 
 /** Risk order used everywhere (and by combineWithExplainer): cannot_assess < low_signals < caution < high_risk. */
 export const RISK_ORDER: readonly RiskLevel[] = ['cannot_assess', 'low_signals', 'caution', 'high_risk'];
@@ -26,7 +26,9 @@ export interface Finding {
 }
 
 /** Signals that create pressure or false trust. Combined with a strong action they mean high risk. */
-const PRESSURE: ReadonlySet<ScamSignal> = new Set(['urgency', 'impersonation', 'threat_or_fear', 'secrecy', 'suspicious_link', 'lookalike_domain', 'link_shortener']);
+const PRESSURE: ReadonlySet<ScamSignal> = new Set(['urgency', 'impersonation', 'manipulation_attempt', 'threat_or_fear', 'secrecy', 'suspicious_link', 'lookalike_domain', 'link_shortener']);
+/** False-trust signals: a claimed brand/agency, or text that tries to vouch for itself to the checker. */
+const FALSE_TRUST: ReadonlySet<ScamSignal> = new Set(['impersonation', 'manipulation_attempt']);
 
 const LURE: ReadonlySet<ScamSignal> = new Set(['prize_or_lottery', 'investment_promise', 'romance', 'advance_fee']);
 const STRONG_LINK_IDS: ReadonlySet<string> = new Set(['url_ip_host', 'url_at_sign', 'url_brand_lookalike', 'url_punycode']);
@@ -134,7 +136,7 @@ export function scoreScam(req: ScamCheckReq): Scored {
   const moneyAsk = (perSignal.get('payment_request') ?? 0) >= 2;
   // A disguised link (IP host, '@', look-alike, punycode) next to a claimed brand/agency is classic phishing.
   const disguisedLink = findings.some((f) => STRONG_LINK_IDS.has(f.id));
-  const claimsBrand = perSignal.has('impersonation');
+  const claimsBrand = [...perSignal.keys()].some((k) => FALSE_TRUST.has(k));
 
   const hasLetters = /[a-z฀-๿]/.test(n.compact);
   const meaningfulText = hasLetters && n.compact.length >= 6;
@@ -179,10 +181,10 @@ function joinBi(parts: Bi[]): Bi {
 
 export function assessScam(req: ScamCheckReq): ScamEngineResult {
   const s = scoreScam(req ?? {});
-  // One evidence item per signal (strongest first); a manipulation attempt is always shown on its own.
+  // One evidence item per signal (strongest first); a manipulation attempt has its own signal (v0.3).
   const seen = new Set<string>();
   const shown = s.findings.filter((f) => {
-    const key = f.id === 'manipulation_attempt' ? f.id : f.signal;
+    const key = f.signal;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;

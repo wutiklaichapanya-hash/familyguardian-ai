@@ -22,6 +22,13 @@ export interface AppConfig {
   logLevel: string;
   sandboxWebhookSecret: string;
   paymentsMode: string;
+  /** POST /auth/register: max per IP per hour (v0.3). */
+  registerRateLimitMax: number;
+  /** Retention purge (v0.3): scam raw text days, Guardian Pause days, check-in months, pg-boss cron ('' = off). */
+  retentionScamTextDays: number;
+  retentionPauseDays: number;
+  retentionCheckinMonths: number;
+  purgeCron: string;
 }
 
 const num = (v: string | undefined, d: number) => (v !== undefined && v !== '' && Number.isFinite(Number(v)) ? Number(v) : d);
@@ -50,6 +57,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, overrides: Part
     logLevel: env.LOG_LEVEL ?? 'info',
     sandboxWebhookSecret: env.SANDBOX_WEBHOOK_SECRET ?? '',
     paymentsMode: env.PAYMENTS_MODE ?? 'sandbox',
+    registerRateLimitMax: num(env.REGISTER_RATE_LIMIT_MAX, 5),
+    retentionScamTextDays: num(env.RETENTION_SCAM_TEXT_DAYS, 30),
+    retentionPauseDays: num(env.RETENTION_PAUSE_DAYS, 90),
+    retentionCheckinMonths: num(env.RETENTION_CHECKIN_MONTHS, 12),
+    purgeCron: env.PURGE_CRON ?? '17 3 * * *',
     ...overrides,
   };
   if (cfg.sessionSecret.length < 32) {

@@ -13,8 +13,9 @@ import { createDb, type Db } from './db/client';
 import { Policy } from './policy';
 import { NotificationEngine } from './notifications/engine';
 import { SimulatedAdapter } from './notifications/adapter';
-import { PgBossQueue, type JobQueue } from './notifications/queue';
-import { resolveSession, SESSION_COOKIE } from './auth';
+import { JOB_PURGE, PgBossQueue, type JobQueue } from './notifications/queue';
+import { runRetentionPurge } from './retention';
+import { resolveSession, sessionCookieName } from './auth';
 import { HttpError, forbidden, unauthorized } from './errors';
 import type { users } from './db/schema';
 import authRoutes from './routes/auth';
@@ -120,7 +121,7 @@ export async function buildApp(opts: BuildOptions = {}): Promise<{ app: FastifyI
     openapi: {
       openapi: '3.1.0',
       info: { title: 'FamilyGuardian AI API', version: '0.1.0', description: 'P0 API. All data is SYNTHETIC in the demo. Mutations require header `x-fg-csrf: 1`.' },
-      components: { securitySchemes: { session: { type: 'apiKey', in: 'cookie', name: SESSION_COOKIE } } },
+      components: { securitySchemes: { session: { type: 'apiKey', in: 'cookie', name: sessionCookieName(config) } } },
       security: [{ session: [] }],
     },
   });
@@ -133,7 +134,7 @@ export async function buildApp(opts: BuildOptions = {}): Promise<{ app: FastifyI
     if (!SAFE_METHODS.has(req.method) && !CSRF_EXEMPT.has(path) && req.headers['x-fg-csrf'] !== '1') {
       throw forbidden('CSRF_REQUIRED', 'Missing x-fg-csrf header');
     }
-    const row = await resolveSession(db, req.cookies[SESSION_COOKIE], config.sessionIdleHours);
+    const row = await resolveSession(db, req.cookies[sessionCookieName(config)], config.sessionIdleHours);
     req.user = row?.user ?? null;
     req.sessionId = row?.sessionId ?? null;
   });
@@ -157,7 +158,15 @@ export async function buildApp(opts: BuildOptions = {}): Promise<{ app: FastifyI
     await billingRoutes(api, ctx);
   }, { prefix: API_PREFIX });
 
-  if (opts.startWorkers !== false) await engine.startWorkers();
+  if (opts.startWorkers !== false) {
+    await engine.startWorkers();
+    // v0.3 retention purge: pg-boss cron (UTC). Empty PURGE_CRON disables the schedule (manual: purge:run).
+    await queue.work(JOB_PURGE, async () => {
+      const counts = await runRetentionPurge(db, config);
+      app.log.info({ counts }, 'retention purge done');
+    });
+    if (config.purgeCron) await queue.schedule(JOB_PURGE, config.purgeCron);
+  }
 
   const close = async () => {
     await app.close();

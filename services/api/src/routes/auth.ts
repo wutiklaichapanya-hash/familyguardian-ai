@@ -1,15 +1,16 @@
 import type { FastifyInstance } from 'fastify';
 import { and, eq } from 'drizzle-orm';
-import type { SessionDTO } from '@fg/shared';
+import type { RegisterRes, SessionDTO } from '@fg/shared';
 import type { Ctx } from '../app';
 import { requireUser } from '../app';
-import { sessions, users } from '../db/schema';
+import { families, sessions, users } from '../db/schema';
 import {
-  createSession, destroySession, dummyVerify, listSessions, LoginThrottle, SESSION_COOKIE, setSessionCookie, verifyPassword,
+  createSession, destroySession, dummyVerify, hashPassword, listSessions, LoginThrottle, sessionCookieName, setSessionCookie, verifyPassword,
 } from '../auth';
 import { recordAudit } from '../audit';
-import { HttpError, notFound } from '../errors';
-import { doc, idParam, loginReq } from '../validation';
+import { HttpError, badRequest, notFound } from '../errors';
+import { doc, idParam, loginReq, registerReq } from '../validation';
+import { passwordProblems } from '../password';
 import { meRes } from '../circles';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -17,6 +18,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export default async function authRoutes(app: FastifyInstance, ctx: Ctx) {
   const { db, config } = ctx;
   const throttle = new LoginThrottle(config.loginDelayBaseMs);
+  const SESSION_COOKIE = sessionCookieName(config);
+  const clearOpts = { path: '/', secure: config.nodeEnv === 'production' }; // __Host- cookies need Secure to be cleared
   const emailOf = (body: unknown) => {
     const e = (body as { email?: unknown } | undefined)?.email;
     return typeof e === 'string' ? e.trim().toLowerCase() : '';
@@ -49,9 +52,48 @@ export default async function authRoutes(app: FastifyInstance, ctx: Ctx) {
     return meRes(db, u);
   });
 
+  // SR-24 (v0.3, DEMO): self-registration. Same 202 whether or not the email exists (no enumeration); never signs in.
+  // A password hash is computed on BOTH paths so timing is similar. Password reset is out of scope (no email provider).
+  const REGISTER_RES: RegisterRes = {
+    status: 'accepted',
+    message: {
+      th: 'ถ้าอีเมลนี้ยังไม่เคยใช้ บัญชีถูกสร้างแล้ว ลองเข้าสู่ระบบได้เลย',
+      en: 'If this email was not already registered, the account has been created. You can try signing in now.',
+    },
+  };
+  app.post('/auth/register', {
+    schema: { tags: ['auth'], summary: 'Create a senior or family account (demo; same 202 whether or not the email exists)', body: doc(registerReq), security: [] },
+    config: { rateLimit: { max: config.registerRateLimitMax, timeWindow: '1 hour', keyGenerator: (req) => `register|${req.ip}` } },
+  }, async (req, reply) => {
+    const b = registerReq.parse(req.body);
+    const problems = passwordProblems(b.password, b.email);
+    if (problems.length) throw badRequest('weak_password', `Password: ${problems.join('; ')}`);
+    const passwordHash = await hashPassword(b.password);
+    const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, b.email)).limit(1);
+    if (existing) {
+      await recordAudit(db, { action: 'auth.register_duplicate' }); // no ids, no email
+      return reply.status(202).send(REGISTER_RES);
+    }
+    try {
+      await db.transaction(async (tx) => {
+        const [u] = await tx.insert(users).values({
+          email: b.email, passwordHash, displayName: b.displayName, role: b.role, locale: b.locale ?? 'th',
+          politeParticle: b.politeParticle ?? 'ka', phone: b.role === 'senior' ? (b.phone ?? null) : null, isSynthetic: false,
+        }).returning({ id: users.id });
+        // A senior owns exactly one family (the [senior] checks are ownership-based).
+        if (b.role === 'senior') await tx.insert(families).values({ name: `${b.displayName}'s family`, seniorId: u!.id });
+        await recordAudit(tx, { actorId: u!.id, seniorId: b.role === 'senior' ? u!.id : null, action: 'auth.registered', meta: { role: b.role } });
+      });
+    } catch (e) {
+      // Concurrent registration of the same email: unique violation → same response.
+      if ((e as { code?: string; cause?: { code?: string } }).code !== '23505' && (e as { cause?: { code?: string } }).cause?.code !== '23505') throw e;
+    }
+    return reply.status(202).send(REGISTER_RES);
+  });
+
   app.post('/auth/logout', { schema: { tags: ['auth'], summary: 'Sign out (Clear-Site-Data)' } }, async (req, reply) => {
     await destroySession(db, req.cookies[SESSION_COOKIE]);
-    reply.clearCookie(SESSION_COOKIE, { path: '/' });
+    reply.clearCookie(SESSION_COOKIE, clearOpts);
     reply.header('clear-site-data', '"cache", "storage"');
     if (req.user) await recordAudit(db, { actorId: req.user.id, action: 'auth.logout' });
     return reply.status(204).send();
@@ -71,7 +113,7 @@ export default async function authRoutes(app: FastifyInstance, ctx: Ctx) {
     const res = await db.delete(sessions).where(and(eq(sessions.id, id), eq(sessions.userId, u.id))).returning({ id: sessions.id });
     if (res.length === 0) throw notFound();
     await recordAudit(db, { actorId: u.id, action: 'auth.session_revoked', targetType: 'session', targetId: id });
-    if (id === req.sessionId) reply.clearCookie(SESSION_COOKIE, { path: '/' });
+    if (id === req.sessionId) reply.clearCookie(SESSION_COOKIE, clearOpts);
     return reply.status(204).send();
   });
 }

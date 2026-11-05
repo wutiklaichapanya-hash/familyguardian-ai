@@ -1,6 +1,6 @@
 # FGAI-2026-001 — Known limitations
 
-Version 0.1 · 2026-11-05 · maintained by DevOps / Release. Required before UAT (AC-15).
+Version 0.2 · 2026-11-05 · maintained by DevOps / Release (v0.2 rows updated by the backend agent for API contract v0.3). Required before UAT (AC-15).
 
 This list is deliberately blunt. FamilyGuardian AI is an **MVP in development** that runs
 locally on **synthetic data only**. Nothing here has passed the DESIGN, ARCH, QA, UAT or
@@ -30,7 +30,7 @@ off this list only with evidence (a test, a review, or a signed gate), never by 
 - **No diagnosis or emotion inference.** FeelSense check-ins are self-reported. Trends show
   only what the senior entered; gaps are "no data", never "decline".
 - Not in the MVP: medication/appointment reminders and care tasks (P1), data export and
-  deletion (P1), screenshot OCR, caller ID, health-data integrations, location tracking.
+  deletion (P1; only a 10-minute check-in undo exists), screenshot OCR, caller ID, health-data integrations, location tracking.
 
 ## 2. Safety
 
@@ -62,7 +62,7 @@ Open (not fixed or not verified), most important first:
 |---|---|---|
 | SR-10 coercive setup / isolation | High | Partial: copy change and login-free emergency page planned; 24 h cool-off deferred (needs owner risk acceptance) |
 | SR-01…SR-09, SR-11…SR-13 | High/Medium | Fixed in contract v0.2; **implementation not independently verified** |
-| SR-11 session hardening | High | Partial in code: Argon2id + DB sessions; cookie is named `fg_session`, not `__Host-` prefixed; step-up / sessions list to be verified |
+| SR-11 session hardening | High | Partial in code: Argon2id + DB sessions; cookie is `__Host-fg_session` (Secure, Path=/) when `NODE_ENV=production`, `fg_session` in dev (API test `v03.test.ts`); step-up / sessions list to be verified independently |
 | SR-14 shared-device caching | Medium | Partial: `Cache-Control: no-store` on `/api/v1` (next.config); logout sends `Clear-Site-Data: "cache", "storage"` (in code, untested); back-button QA test not run |
 | SR-15 lockout / login-free emergency screen | Medium | Rate limits present on login, invites, accept and senior writes; progressive delay and login-free emergency screen not verified |
 | SR-16 simulated-channel honesty labels | Medium | Open — **blocks UAT** |
@@ -70,10 +70,10 @@ Open (not fixed or not verified), most important first:
 | SR-18 scam evidence rendering | Medium | Partial: `format-detection: telephone=no` set in the web layout; defanging/ReDoS review not verified |
 | SR-19 AI explainer text safety | Medium | Open — **blocks enabling any AI provider** (AI is off by default) |
 | SR-20 runtime forbidden-phrase check (Thai normalisation) | Medium | Open / not verified |
-| SR-21 audit integrity | Medium | Partial: DB trigger rejects UPDATE/DELETE on `audit_events`; no separate DB roles, no hash chain, TRUNCATE still possible |
+| SR-21 audit integrity | Medium | Partial: DB trigger rejects UPDATE/DELETE; append-only hash chain (`prev_hash`, `hash = sha256(prev_hash ‖ canonical row)`) with `pnpm --filter @fg/api audit:verify` (tamper/delete detection tested). **Still open:** no separate DB role, so the app role can disable triggers, TRUNCATE (the seed does) or rewrite the whole chain; the head hash is not anchored outside the DB |
 | SR-22 access log completeness | Low | Open |
 | SR-23 Guardian Pause amount bucketing | Medium | Fixed in contract v0.2 (amount buckets); implementation not verified |
-| SR-24 registration and password reset | Medium | Not designed / not built |
+| SR-24 registration and password reset | Medium | Partial: demo `POST /auth/register` (senior/family; same 202 whether or not the email exists; per-IP rate limit; password-strength rule). No email verification. **Password reset not built: there is no email provider** |
 | SR-25 CSRF conditions | Low | Partial: `x-fg-csrf` header enforced on non-safe methods; Origin/Sec-Fetch-Site check and API port binding not verified |
 | SR-26 notification payload templates | Low | Open |
 | SR-27 display-name spoofing | Low | Open |
@@ -110,8 +110,11 @@ Not legal advice; a qualified Thai DPO or lawyer must review (blocker B5).
 - Data-subject rights: export and deletion are P1 and not built; rectification, objection,
   restriction and portability are not designed; deletion does not cascade to alerts,
   notifications, logs or backups (SR-33).
-- Retention periods in `docs/architecture/03_ARCHITECTURE.md` §5 are **proposed**; purge jobs
-  are not verified.
+- Retention periods in `docs/architecture/03_ARCHITECTURE.md` §5 are **proposed** (not DPO-reviewed). A purge job now
+  exists (pg-boss cron + `pnpm --filter @fg/api purge:run`, tested with backdated rows): scam raw text and evidence
+  quotes after 30 days (risk and signals kept), Guardian Pause sessions after 90 days, check-ins after 12 months,
+  dead sessions. It does not reach alerts, notifications, audit/access logs or backups.
+- A check-in can be undone (hard delete) only within 10 minutes; after that, deletion waits for P1 data-subject rights.
 - No cross-border transfer assessment, processor agreements or breach-notification runbook
   (SR-34). This blocks enabling the Anthropic API and any hosted staging.
 - **Rule:** synthetic data only. No real names, phone numbers, health or bank data may be
@@ -136,6 +139,8 @@ Not legal advice; a qualified Thai DPO or lawyer must review (blocker B5).
   covered. URLs are analysed as strings only; nothing is fetched (no reputation lookup).
 - Thai text normalisation (zero-width characters, mixed scripts, transliteration) is a known
   weak point for keyword rules (SR-20).
+- Prompt-injection text is reported as its own signal `manipulation_attempt` (contract v0.3). Eval numbers did not
+  change (see `packages/ai/evals/EVAL_REPORT.md`).
 
 ## 7. Infrastructure and operations
 

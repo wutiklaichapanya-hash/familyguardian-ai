@@ -31,6 +31,9 @@ describe('prompt-injection resistance', () => {
       const r = assessScam({ text: inj });
       expect(r.risk, inj).toBe('caution');
       expect(r.evidence.some((e) => e.explanation.en.includes('tries to tell checking tools'))).toBe(true);
+      // v0.3: reported as its own signal, never as impersonation.
+      expect(r.evidence.map((e) => e.signal), inj).toContain('manipulation_attempt');
+      expect(r.evidence.map((e) => e.signal), inj).not.toContain('impersonation');
     }
   });
 });

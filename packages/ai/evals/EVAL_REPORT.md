@@ -13,7 +13,7 @@ Metric definitions
 
 <!-- EVAL:START -->
 ```text
-Engine: rules rules-1.0.0 · cases: 81 (scam 47, benign 25, edge 9)
+Engine: rules rules-1.1.0 · cases: 81 (scam 47, benign 25, edge 9)
 Recall on scam cases (risk ∈ {caution, high_risk}): 47/47 = 100.0%
 High-risk recall (cases expected high_risk that got high_risk): 29/31 = 93.5%
 False-positive rate on benign cases (risk = high_risk): 0/25 = 0.0%
@@ -32,6 +32,14 @@ Cases meeting their expected range: 79/81 = 97.5%
 - s13 (scam/investment): expected high_risk+, got **caution** [investment_promise]
 - s15 (scam/loan_advance_fee): expected high_risk+, got **caution** [advance_fee]
 <!-- EVAL:END -->
+
+## Contract v0.3 re-run (2026-11-05, engine rules-1.1.0)
+
+Prompt-injection phrases now report the new `ScamSignal` `manipulation_attempt` instead of `impersonation`.
+Scoring treats it as a pressure / false-trust signal, exactly as impersonation was treated before, so no
+case changed risk: the numbers above (re-run with `--write` after the change) are identical to rules-1.0.0
+(recall 47/47, high-risk recall 29/31, benign high_risk 0/25, benign caution 1/25, in range 79/81).
+The only visible difference is the evidence signal on the 5 injection scams and the injection-only edge case.
 
 ## First run (before any change), kept for honesty
 
