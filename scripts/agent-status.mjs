@@ -53,6 +53,9 @@ const AGENTS = [
     ['design proposal', /^docs\/design\/CODEX_UX_DESIGN_01\.md$/] ] },
   { id: 'web-p0', agent: 'Frontend pass 2 (Codex P0 fixes, worktree)', area: 'apps/web', items: [['merged to main', /^docs\/decisions\/merged_web_p0\.flag$/]] },
   { id: 'api-v03', agent: 'Backend pass 2 (contract v0.3, worktree)', area: 'services/api', items: [['merged to main', /^docs\/decisions\/merged_api_v03\.flag$/]] },
+  { id: 'codex-mock', agent: 'Codex (OpenAI) UI mockups', area: 'docs/design/mockups', items: [
+    ['home mockup', /^docs\/design\/mockups\/mock_home\.png$/], ['scam mockup', /^docs\/design\/mockups\/mock_scam_result\.png$/], ['family mockup', /^docs\/design\/mockups\/mock_family\.png$/]] },
+  { id: 'redesign', agent: 'Visual redesign (worktree)', area: 'apps/web', items: [['merged to main', /^docs\/decisions\/merged_redesign\.flag$/]] },
 ];
 const statePath = join(ROOT, 'docs/decisions/agent_state.json');
 const state = existsSync(statePath) ? JSON.parse(readFileSync(statePath, 'utf8')) : {};

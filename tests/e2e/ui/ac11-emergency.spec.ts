@@ -12,7 +12,7 @@ test('AC-11: /emergency is reachable without sign-in and lists 1669 / 191 / 1441
   }
   await expect(page.getByText(/แอปไม่ได้แจ้งหน่วยงานให้อัตโนมัติ|does not notify any agency automatically/).first()).toBeVisible();
   // needs_human_verification entries carry a visible "not yet verified" badge
-  await expect(page.getByText(/รอการยืนยันข้อมูล|Awaiting verification|ตรวจสอบเมื่อ|Verified on/).first()).toBeVisible();
+  await expect(page.getByText(/รอการยืนยันข้อมูล|ยังรอผู้ดูแลระบบตรวจสอบ|Awaiting verification|still waiting for an administrator to check|ตรวจสอบเมื่อ|Verified on/).first()).toBeVisible();
 });
 
 test('AC-11: no agency acknowledgement, no case number, no dispatch claims — before and after tapping a number', async ({ page }) => {

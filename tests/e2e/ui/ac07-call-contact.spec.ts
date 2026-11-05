@@ -19,7 +19,7 @@ test('AC-7: tapping a trusted contact opens tel: and logs "call started from app
   }));
   await telLinks.first().click();
 
-  await expect(page.getByText(/เริ่มโทรจากแอป|Call started from app|เปิดหน้าโทรออกแล้ว/).first()).toBeVisible();
+  await expect(page.getByText(/เริ่มโทรจากแอป|Call started from app|เปิดหน้าโทรออกแล้ว|ขอเปิดแอปโทรศัพท์|Asked your phone app to call/).first()).toBeVisible();
   const text = await pageText(page);
   expect(text).not.toMatch(/call connected|connected|สายเชื่อมต่อแล้ว|โทรสำเร็จ|call completed/i);
 

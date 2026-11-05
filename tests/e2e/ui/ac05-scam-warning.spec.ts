@@ -27,9 +27,9 @@ test('AC-5: Thai fake-bank SMS -> caution/high risk with reasons, uncertainty, s
   const r = await resultText(page);
   const risky = [RISK_LABELS.high_risk.th, RISK_LABELS.caution.th, RISK_LABELS.high_risk.en, RISK_LABELS.caution.en];
   expect(risky.some((l) => r.includes(l)), `result shows caution/high risk label. Got:\n${r.slice(0, 800)}`).toBe(true);
-  await expect(page.getByText(/ทำไมถึงคิดแบบนี้|Why we think so/)).toBeVisible();
-  await expect(page.getByText(/สิ่งที่เรายังไม่แน่ใจ|What we are not sure about/)).toBeVisible();
-  await expect(page.getByText(/สิ่งที่ควรทำต่อ|What to do next/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: /ทำไมถึงคิดแบบนี้|จุดที่ควรระวัง|Why we think so|Things to watch out for/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /สิ่งที่เรายังไม่แน่ใจ|สิ่งที่แอปยังยืนยันไม่ได้|What we are not sure about|What the app cannot confirm/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /สิ่งที่ควรทำต่อ|What to do next/ })).toBeVisible();
   // at least one plain-language reason (signal label) is shown
   expect(r).toMatch(/แอบอ้าง|เร่ง|OTP|รหัส|ลิงก์|Pretends|quickly|OTP|link/i);
   // "ask family" and "call 1441"

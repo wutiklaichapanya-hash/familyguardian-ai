@@ -41,10 +41,21 @@
   },
   "qa": {
     "status": "reported",
-    "tests": "E2E 225/227 pass; 2 Medium (ack delivery state, 320px welcome reflow); axe 0 violations on 24 screens"
+    "tests": "E2E run 2: 236/236 pass; axe 0 violations (24 screens); F-1 & F-2 closed"
   },
   "api-v03": {
     "status": "reported",
-    "tests": "api 79/79, ai 114/114 (agent-reported; lead re-run after merge)"
+    "tests": "api 79/79, ai 114/114 (lead re-run after merge)"
+  },
+  "web-p0": {
+    "status": "reported",
+    "tests": "web 60/60 (lead re-run after merge); build OK"
+  },
+  "codex-mock": {
+    "status": "reported",
+    "tests": "n/a \u2014 3 mockups (home, scam result, family)"
+  },
+  "redesign": {
+    "status": "running"
   }
 }
